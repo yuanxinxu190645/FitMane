@@ -1,4 +1,4 @@
-import '../models/exercise.dart';
+import '../catalog/exercise_catalog.dart' show kEquipment;
 import 'exercise_match.dart' show guessMuscle;
 
 class InferredExerciseMeta {
