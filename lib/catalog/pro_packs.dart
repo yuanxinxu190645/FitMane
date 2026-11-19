@@ -604,7 +604,7 @@ const List<Exercise> kPowerFunctionalPackExercises = [
     equipment: 'Barbell',
     difficulty: 'Intermediate',
     art: 'cable-woodchop',
-    aliases: ['站姿地雷架核心抗阻转体', '俄罗斯转体地雷架站姿版', 'Landmine Twist'],
+    aliases: ['站姿地雷架核心抗阻转体', '俄罗斯转体地雷架站姿版', 'Landmine Anti-Rotation'],
     steps: [
       'Stand facing the landmine anchor holding the bar sleeve overhead at arms length with slight elbow bend.',
       'Sweep the barbell smoothly down in an arc toward one hip while rotating from your obliques and feet.',
