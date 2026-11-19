@@ -14,11 +14,17 @@ import '../widgets/ui_kit.dart';
 class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
 
+  static const _nutritionTools = {'cal', 'protein', 'water'};
+
   @override
   Widget build(BuildContext context) {
     final gc = context.gc;
     final scale = MediaQuery.textScalerOf(context).scale(1);
     final wide = DesktopScope.of(context);
+    final visibleTools = [
+      for (final tool in kToolMeta)
+        if (fit.nutritionBeta || !_nutritionTools.contains(tool.id)) tool,
+    ];
     return SafeArea(
       bottom: false,
       child: SingleChildScrollView(
@@ -31,11 +37,11 @@ class ToolsScreen extends StatelessWidget {
               title: t.tools,
               onBack: fit.backFromTools,
               titleSize: 22,
-              subtitle: t.calculatorsCount(kToolMeta.length),
+              subtitle: t.calculatorsCount(visibleTools.length),
             ),
             const SizedBox(height: 22),
             if (wide)
-              _desktop(gc, scale)
+              _desktop(gc, scale, visibleTools)
             else
               GridView.count(
                 crossAxisCount: 2,
@@ -44,7 +50,7 @@ class ToolsScreen extends StatelessWidget {
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
                 childAspectRatio: 1.12 / scale,
-                children: [for (final tool in kToolMeta) _card(gc, tool, scale)],
+                children: [for (final tool in visibleTools) _card(gc, tool, scale)],
               ),
           ],
         ),
@@ -52,17 +58,19 @@ class ToolsScreen extends StatelessWidget {
     );
   }
 
-  Widget _desktop(GymColors gc, double scale) {
-    final picked = kToolMeta.any((m) => m.id == fit.activeToolId) ? fit.activeToolId! : kToolMeta.first.id;
+  Widget _desktop(GymColors gc, double scale, List<ToolMeta> visibleTools) {
+    final picked =
+        visibleTools.any((m) => m.id == fit.activeToolId) ? fit.activeToolId! : visibleTools.first.id;
     if (fit.activeToolId != picked) fit.activeToolId = picked;
+    final groups = [
+      (t.kindStrength, const ['rm', 'plate', 'warmup', 'rpe', 'dots', 'wilks']),
+      (t.toolGroupBody, const ['bmi', 'bf', 'ffmi']),
+      if (fit.nutritionBeta) (t.nutrition, const ['cal', 'protein', 'water']),
+    ];
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            for (final (i, g) in [
-              (t.kindStrength, const ['rm', 'plate', 'warmup', 'rpe', 'dots', 'wilks']),
-              (t.toolGroupBody, const ['bmi', 'bf', 'ffmi']),
-              (t.nutrition, const ['cal', 'protein', 'water']),
-            ].indexed) ...[
+            for (final (i, g) in groups.indexed) ...[
               if (i > 0) const SizedBox(height: 26),
               Padding(
                 padding: const EdgeInsetsDirectional.only(start: 4, bottom: 12),

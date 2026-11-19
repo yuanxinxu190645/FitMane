@@ -1709,9 +1709,11 @@ mixin NutritionState on FitCore, ToolsState, StatsState {
 
   void setNutritionBeta(bool on) {
     nutritionBeta = on;
+    if (!on && route == 'nutrition') goHome();
     syncSupplementReminder();
     _syncFast();
     _persist();
+    _refreshWidgets();
     notifyListeners();
   }
 

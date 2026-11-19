@@ -158,5 +158,89 @@ void main() {
       expect(kExercises.where(filterBench).any((e) => e.id == 'SpYC0Kp'), isTrue);
       setAppLanguage('en');
     });
+
+    test('quickLogDefaultSets defaults to 5, clamps 1..12, and persists', () {
+      expect(fit.quickLogDefaultSets, 5);
+      fit.setQuickLogDefaultSets(0);
+      expect(fit.quickLogDefaultSets, 1);
+      fit.setQuickLogDefaultSets(99);
+      expect(fit.quickLogDefaultSets, 12);
+      fit.setQuickLogDefaultSets(3);
+      fit.toggleQuickLog();
+      expect(fit.showQuickLog, isFalse);
+
+      fit.persistNow();
+      fit.loadFromStore();
+      expect(fit.quickLogDefaultSets, 3);
+      expect(fit.showQuickLog, isFalse);
+
+      fit.resetAllData();
+      expect(fit.quickLogDefaultSets, 5);
+      expect(fit.showQuickLog, isTrue);
+    });
+
+    test('kHomeBlocks puts bodycomp and quicklog before focus', () {
+      expect(kHomeBlocks.indexOf('bodycomp'), lessThan(kHomeBlocks.indexOf('focus')));
+      expect(kHomeBlocks.indexOf('quicklog'), lessThan(kHomeBlocks.indexOf('focus')));
+    });
+
+    test('quickLogAddExercise creates sets, pre-fills history, avoids duplicates, and edits kind/note', () {
+      final bench = kExercises.firstWhere((e) => e.id == 'EIeI8Vf');
+      final prevDay = DateTime(2026, 11, 10, 12);
+      final targetDay = DateTime(2026, 11, 12, 12);
+
+      fit.sessions.add(LoggedSession(prevDay, 1800, [
+        LoggedExercise(bench.id, bench.name, bench.primary, [
+          LoggedSet(8, 80),
+          LoggedSet(6, 85),
+        ]),
+      ]));
+
+      final res1 = fit.quickLogAddExercise(bench, day: targetDay);
+      expect(res1.created, isTrue);
+      expect(res1.exercise.sets, hasLength(5));
+      expect(res1.exercise.sets[0].weight, 80);
+      expect(res1.exercise.sets[0].reps, 8);
+      expect(res1.exercise.sets[4].weight, 85);
+      expect(res1.exercise.sets[4].reps, 6);
+      expect(fit.isLoggedOnDay(bench.id, targetDay), isTrue);
+      expect(fit.isLoggedOnDay(bench.id, DateTime(2026, 11, 11)), isFalse);
+
+      final resDup = fit.quickLogAddExercise(bench, day: targetDay);
+      expect(resDup.created, isFalse);
+      expect(fit.sessionsOn(targetDay).single.exercises, hasLength(1));
+
+      fit.setLoggedKind(res1.exercise, 0, SetKind.warmup);
+      fit.setLoggedNote(res1.exercise, 1, '顶峰收缩');
+      fit.persistNow();
+      fit.loadFromStore();
+
+      final reloaded = fit.sessionsOn(targetDay).single.exercises.single;
+      expect(reloaded.sets[0].kind, SetKind.warmup);
+      expect(reloaded.sets[1].note, '顶峰收缩');
+
+      final row = kExercises.firstWhere((e) => e.id != bench.id && fit.modeOf(e.id).isEmpty);
+      fit.setQuickLogDefaultSets(3);
+      final resCustom = fit.quickLogAddExercise(row, day: targetDay);
+      expect(resCustom.created, isTrue);
+      expect(resCustom.exercise.sets, hasLength(3));
+    });
+
+    test('setNutritionBeta exits nutrition route, persists off state, and restores cleanly', () {
+      fit.onboarded = true;
+      fit.pushRoute('nutrition');
+      expect(fit.route, 'nutrition');
+
+      fit.setNutritionBeta(false);
+      expect(fit.nutritionBeta, isFalse);
+      expect(fit.route, 'home');
+
+      fit.persistNow();
+      fit.loadFromStore();
+      expect(fit.nutritionBeta, isFalse);
+
+      fit.setNutritionBeta(true);
+      expect(fit.nutritionBeta, isTrue);
+    });
   });
 }

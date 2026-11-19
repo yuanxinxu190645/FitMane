@@ -8,6 +8,7 @@ import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 
 import '../app/desktop.dart';
 import '../catalog/exercise_catalog.dart';
+import '../l10n/extra_strings.dart';
 import '../l10n/l10n.dart';
 import '../models/exercise.dart';
 import '../services/media_store.dart';
@@ -18,6 +19,8 @@ import '../widgets/body_map.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/exercise_media.dart';
 import '../widgets/glass.dart';
+import '../widgets/liquid_notch.dart';
+import '../widgets/quick_log_sheet.dart';
 import '../widgets/svg_icon.dart';
 import '../widgets/ui_kit.dart';
 import '../widgets/local_image.dart';
@@ -510,6 +513,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                       ],
                     ),
                   ),
+                  _quickAddBtn(context, gc, ex),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => fit.toggleFavorite(ex.id),
@@ -529,6 +533,45 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
               color: gc.text.withValues(alpha: 0.06),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _quickAddBtn(BuildContext context, GymColors gc, Exercise ex) {
+    final logged = fit.isLoggedOnDay(ex.id);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        if (logged) {
+          showQuickLogSheet(context, expandExerciseId: ex.id);
+          return;
+        }
+        final res = fit.quickLogAddExercise(ex);
+        showNotchToast(
+          context,
+          ExtraStrings.quickLogAddedToast(exerciseName(ex), res.exercise.sets.length),
+          icon: PhosphorIconsFill.checkCircle,
+          accent: gc.sage,
+          action: ExtraStrings.quickLogOpenToday,
+          onTap: () => showQuickLogSheet(context, expandExerciseId: ex.id),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: logged ? gc.sage.withValues(alpha: 0.16) : gc.bgRaised2,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            logged ? PhosphorIconsBold.check : PhosphorIconsBold.plus,
+            size: 14,
+            color: logged ? gc.sage : gc.accent,
+          ),
+        ),
       ),
     );
   }

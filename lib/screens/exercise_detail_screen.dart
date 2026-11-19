@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 
 import '../app/desktop.dart';
+import '../l10n/extra_strings.dart';
 import '../l10n/l10n.dart';
 import '../models/exercise.dart';
 import '../models/workout.dart';
@@ -23,6 +24,7 @@ import '../widgets/ruler_picker.dart';
 import '../widgets/glass.dart';
 import '../widgets/liquid_notch.dart';
 import '../widgets/progression_sheet.dart';
+import '../widgets/quick_log_sheet.dart';
 import '../widgets/stopwatch_card.dart';
 import '../widgets/svg_icon.dart';
 import '../widgets/timer_panel.dart';
@@ -190,6 +192,8 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
         ],
       ),
       const SizedBox(height: 18),
+      _quickLogRow(context, gc, ex),
+      const SizedBox(height: 10),
       _addToRoutineRow(context, gc, ex),
       if (!desktop) ...[
         const SizedBox(height: 10),
@@ -807,6 +811,63 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                 ),
               ),
               Icon(PhosphorIconsRegular.caretRight, size: 15, color: gc.textTertiary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _quickLogRow(BuildContext context, GymColors gc, Exercise ex) {
+    final logged = fit.isLoggedOnDay(ex.id);
+    return Semantics(
+      button: true,
+      child: Pressable(
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          if (!logged) fit.quickLogAddExercise(ex);
+          showQuickLogSheet(context, expandExerciseId: ex.id);
+        },
+        scale: 0.98,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          decoration: BoxDecoration(
+            color: gc.bgRaised,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            children: [
+              _rowIcon(gc, PhosphorIconsRegular.lightning, logged),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      logged ? ExtraStrings.quickLogInToday : ExtraStrings.quickLogAddToToday(fit.quickLogDefaultSets),
+                      style: AppTheme.f(14.5, weight: FontWeight.w600, color: gc.text),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      ExtraStrings.quickLogTitle,
+                      style: AppTheme.f(11.5, weight: FontWeight.w500, color: gc.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: logged ? gc.sage : gc.ember,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  logged ? PhosphorIconsBold.check : PhosphorIconsBold.plus,
+                  size: 14,
+                  color: gc.onEmber,
+                ),
+              ),
             ],
           ),
         ),

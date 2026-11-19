@@ -127,4 +127,45 @@ class ExtraStrings {
   static String get logTodayEntry => _zh ? '记一笔体态' : 'Log entry';
   static String get deleteEntryLabel => _zh ? '删除记录' : 'Delete';
   static String get tapChartHint => _zh ? '点击或滑动图表查看具体日期数值' : 'Tap chart points to inspect values';
+
+  // Quick daily log mode
+  static String get quickLogTitle => _zh ? '今日训练记录' : 'Quick Training Log';
+  static String get quickLogEmptyHint =>
+      _zh ? '无需先开计划，随时搜动作加入今天并记录组数与重量' : 'Search any exercise to log sets & weights directly';
+  static String get quickLogAddExercise => _zh ? '添加动作' : 'Add exercise';
+  static String get quickLogOpenToday => _zh ? '去记录' : 'Edit sets';
+  static String quickLogAddedToast(String name, int sets) =>
+      _zh ? '已加入今日：$name（$sets 组）' : 'Added $name ($sets sets)';
+  static String get quickLogAlreadyAdded => _zh ? '已在今日记录中' : 'Already logged today';
+  static String get quickLogToday => _zh ? '今天' : 'Today';
+  static String get quickLogYesterday => _zh ? '昨天' : 'Yesterday';
+  static String get quickLogNoEntriesDay => _zh ? '这一天还没有记录任何训练动作' : 'No exercises logged for this day yet';
+  static String get quickLogAddSet => _zh ? '加一组' : 'Add set';
+  static String get quickLogSetNoteTitle => _zh ? '单组备注' : 'Set note';
+  static String get quickLogSetNoteHint =>
+      _zh ? '记录本组感受，如：力竭 / 稳 / 借力' : 'How it felt (e.g. clean, RPE 9, drop)';
+  static String quickLogLastSession(String summary) =>
+      _zh ? '上次：$summary' : 'Last: $summary';
+  static String quickLogSummary(int exCount, int setCount) =>
+      _zh ? '$exCount 个动作 · $setCount 组' : '$exCount exercises · $setCount sets';
+  static String get quickLogDeleteExercise => _zh ? '移除该动作' : 'Remove exercise';
+  static String get quickLogSearchHint =>
+      _zh ? '搜索动作（支持中文俗称，如 卧推 / 夹胸 / 臀推）' : 'Search exercises…';
+  static String quickLogRecommendedTitle(String focusTitle) =>
+      _zh ? '今日推荐 · $focusTitle' : 'Suggested today · $focusTitle';
+  static String get quickLogRecentTitle => _zh ? '最近练过' : 'Recently logged';
+  static String get quickLogAllExercises => _zh ? '全部动作' : 'All exercises';
+  static String quickLogAddToToday(int defaultSets) =>
+      _zh ? '加入今日训练（默认 $defaultSets 组）' : 'Add to today ($defaultSets sets)';
+  static String get quickLogInToday => _zh ? '今日已记 · 编辑组数' : 'Logged today · Edit sets';
+  static String get quickLogDefaultSetsLabel => _zh ? '即时记录默认组数' : 'Quick-log default sets';
+  static String get quickLogDefaultSetsHint =>
+      _zh ? '点击搜索结果加入今日训练时自动生成的组数' : 'Number of sets created when quick-adding an exercise';
+  static String quickLogSetsUnit(int n) => _zh ? '$n 组' : '$n sets';
+
+  // Nutrition module master switch
+  static String get nutritionModuleTitle => _zh ? '饮食记录与营养' : 'Nutrition & diet module';
+  static String get nutritionModuleHint => _zh
+      ? '关闭后不展示饮食标签页、首页卡片、饮食工具与统计，也不启用相关提醒'
+      : 'Hide nutrition tab, home card, diet tools & reports, and disable reminders';
 }

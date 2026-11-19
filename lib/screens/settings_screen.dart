@@ -278,6 +278,17 @@ class SettingsScreen extends StatelessWidget {
               fit.setTextSize,
               hint: t.textSizeHint,
             ),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => fit.setNutritionBeta(!fit.nutritionBeta),
+              child: _prefRow(
+                gc,
+                PhosphorIconsRegular.forkKnife,
+                ExtraStrings.nutritionModuleTitle,
+                TinySwitch(on: fit.nutritionBeta),
+                hint: ExtraStrings.nutritionModuleHint,
+              ),
+            ),
             AnimatedBuilder(
               animation: AppUpdater.instance,
               builder: (context, _) {
@@ -435,6 +446,30 @@ class SettingsScreen extends StatelessWidget {
           ]),
           _subhead(gc, t.settingsDuring),
           _card(gc, [
+                  _prefRow(
+                    gc,
+                    PhosphorIconsRegular.listNumbers,
+                    ExtraStrings.quickLogDefaultSetsLabel,
+                    StepperControl(
+                      value: ExtraStrings.quickLogSetsUnit(fit.quickLogDefaultSets),
+                      minWidth: 48,
+                      btnSize: 28,
+                      gap: 10,
+                      fontSize: 14,
+                      onDec: () => fit.setQuickLogDefaultSets(fit.quickLogDefaultSets - 1),
+                      onInc: () => fit.setQuickLogDefaultSets(fit.quickLogDefaultSets + 1),
+                      onEdit: () async {
+                        final v = await askNumber(
+                          context,
+                          title: ExtraStrings.quickLogDefaultSetsLabel,
+                          initial: '${fit.quickLogDefaultSets}',
+                          decimal: false,
+                        );
+                        if (v != null) fit.setQuickLogDefaultSets(v.round());
+                      },
+                    ),
+                    hint: ExtraStrings.quickLogDefaultSetsHint,
+                  ),
                   _choiceRow(
                     context,
                     gc,
@@ -946,6 +981,7 @@ class SettingsScreen extends StatelessWidget {
         if (AppIcon.available) (t.appIcon, PhosphorIconsRegular.appWindow),
         (t.perfSetting, PhosphorIconsRegular.lightning),
         (t.textSizeSetting, PhosphorIconsRegular.textAa),
+        (ExtraStrings.nutritionModuleTitle, PhosphorIconsRegular.forkKnife),
         (ExtraStrings.appUpdatesTitle, PhosphorIconsRegular.arrowCircleDown),
       ]),
       _Category('training', PhosphorIconsRegular.barbell, _sectionTitle('training'), [
@@ -953,6 +989,7 @@ class SettingsScreen extends StatelessWidget {
         (t.miniRest, PhosphorIconsRegular.timer),
         (t.changeRest, PhosphorIconsRegular.timer),
         (t.sideRest, PhosphorIconsRegular.arrowsLeftRight),
+        (ExtraStrings.quickLogDefaultSetsLabel, PhosphorIconsRegular.listNumbers),
         (t.effortSetting, PhosphorIconsRegular.gauge),
         (t.weightStepSetting, PhosphorIconsRegular.barbell),
         (t.autoProgressSetting, PhosphorIconsRegular.trendUp),

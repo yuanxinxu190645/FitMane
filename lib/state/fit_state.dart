@@ -291,6 +291,8 @@ class FitState extends FitCore
     _builtInExercises = null;
     bgDim = (data['bgDim'] as num?)?.toDouble() ?? 0.55;
     showBodyComp = data['showBodyComp'] as bool? ?? true;
+    showQuickLog = data['showQuickLog'] as bool? ?? true;
+    quickLogDefaultSets = ((data['quickLogSets'] as num?)?.toInt() ?? 5).clamp(1, 12);
     showFocus = data['showFocus'] as bool? ?? true;
     showRecommended = data['showRecs'] as bool? ?? true;
     showWeekStats = data['showWeek'] as bool? ?? true;
@@ -577,6 +579,8 @@ class FitState extends FitCore
         'heatTone': heatTone,
         'bgDim': bgDim,
         'showBodyComp': showBodyComp,
+        'showQuickLog': showQuickLog,
+        'quickLogSets': quickLogDefaultSets,
         'showFocus': showFocus,
         'showRecs': showRecommended,
         'showWeek': showWeekStats,
@@ -813,6 +817,8 @@ class FitState extends FitCore
     profile = Profile();
     themePref = 'system';
     showBodyComp = true;
+    showQuickLog = true;
+    quickLogDefaultSets = 5;
     showFocus = true;
     showRecommended = true;
     textSize = 'normal';

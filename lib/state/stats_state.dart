@@ -461,7 +461,7 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
   }
 
   void _replaceLoggedSet(LoggedExercise e, int i,
-      {int? reps, int? left, int? right, double? weight, int? sec, double? km}) {
+      {int? reps, int? left, int? right, double? weight, int? sec, double? km, SetKind? kind, String? note}) {
     if (i < 0 || i >= e.sets.length) return;
     final old = e.sets[i];
     var l = old.left;
@@ -478,17 +478,103 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
     e.sets[i] = LoggedSet(
       reps ?? old.reps,
       weight ?? old.weight,
-      kind: old.kind,
+      kind: kind ?? old.kind,
       rpe: old.rpe,
       sec: sec ?? old.sec,
       km: km ?? old.km,
-      note: old.note,
+      note: note ?? old.note,
       left: l,
       right: r,
     );
     persistNow();
     _refreshWidgets();
     notifyListeners();
+  }
+
+  void setLoggedKind(LoggedExercise e, int i, SetKind kind) =>
+      _replaceLoggedSet(e, i, kind: kind);
+
+  void setLoggedNote(LoggedExercise e, int i, String note) =>
+      _replaceLoggedSet(e, i, note: note.trim());
+
+  bool isLoggedOnDay(String exerciseId, [DateTime? day]) =>
+      sessionsOn(day ?? DateTime.now()).any((s) => s.exercises.any((e) => e.id == exerciseId));
+
+  LoggedExercise? previousExerciseBefore(String exerciseId, DateTime day) {
+    final target = _dayKey(day);
+    for (final h in exerciseHistory(exerciseId)) {
+      if (_dayKey(h.date).isBefore(target)) return h.ex;
+    }
+    return null;
+  }
+
+  ({LoggedSession session, LoggedExercise exercise, bool created}) quickLogAddExercise(
+    Exercise ex, {
+    DateTime? day,
+    int? setsCount,
+  }) {
+    final now = DateTime.now();
+    final target = day ?? now;
+    final existing = sessionsOn(target);
+    for (final s in existing) {
+      for (final e in s.exercises) {
+        if (e.id == ex.id) {
+          return (session: s, exercise: e, created: false);
+        }
+      }
+    }
+
+    final s = existing.isNotEmpty
+        ? existing.first
+        : LoggedSession(
+            _dayKey(target) == _dayKey(now)
+                ? now
+                : DateTime(target.year, target.month, target.day, 12),
+            0,
+            [],
+          );
+    if (existing.isEmpty) {
+      sessions.add(s);
+    }
+
+    final cardio = isCardio(ex.id) || kCardioExtras.contains(ex.id);
+    final timed = !cardio && isTimed(ex.id);
+    final count = (setsCount ?? (cardio ? 1 : quickLogDefaultSets)).clamp(1, 12);
+
+    final prev = previousExerciseBefore(ex.id, target) ?? exerciseHistory(ex.id).firstOrNull?.ex;
+    final seedSets = prev == null
+        ? const <LoggedSet>[]
+        : (prev.workingSets.isNotEmpty ? prev.workingSets : prev.sets);
+
+    final initialSets = <LoggedSet>[];
+    for (var k = 0; k < count; k++) {
+      if (seedSets.isNotEmpty) {
+        final src = seedSets[k < seedSets.length ? k : seedSets.length - 1];
+        initialSets.add(LoggedSet(
+          src.reps,
+          src.weight,
+          sec: src.sec,
+          km: src.km,
+          left: src.left,
+          right: src.right,
+        ));
+      } else if (cardio) {
+        initialSets.add(LoggedSet(0, 0, sec: 1200, km: 3.0));
+      } else if (timed) {
+        initialSets.add(LoggedSet(0, 0, sec: 45));
+      } else {
+        initialSets.add(LoggedSet(10, 0));
+      }
+    }
+
+    final logged = LoggedExercise(ex.id, ex.name, ex.primary, initialSets);
+    s.exercises.add(logged);
+    healthSave(s);
+    persistNow();
+    _refreshWidgets();
+    refreshAwards(silent: true);
+    notifyListeners();
+    return (session: s, exercise: logged, created: true);
   }
 
   void setLoggedReps(LoggedExercise e, int i, int reps) => _replaceLoggedSet(e, i, reps: reps.clamp(0, 999));

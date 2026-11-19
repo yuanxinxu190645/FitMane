@@ -19,8 +19,9 @@ class HomeCardsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final gc = context.gc;
     final rows = <(String, bool, VoidCallback)>[
-      (t.homeCardFocus, fit.showFocus, fit.toggleFocusCard),
       (ExtraStrings.bodyCompTitle, fit.showBodyComp, fit.toggleBodyComp),
+      (ExtraStrings.quickLogTitle, fit.showQuickLog, fit.toggleQuickLog),
+      (t.homeCardFocus, fit.showFocus, fit.toggleFocusCard),
       if (fit.stepsAvailable) (t.homeCardSteps, fit.stepsOn, onSteps),
       (t.homeCardWeek, fit.showWeekStats, fit.toggleWeekStats),
       (t.homeCardRoutines, fit.showRoutineRow, fit.toggleRoutineRow),
@@ -106,7 +107,9 @@ class HomeCardsPanel extends StatelessWidget {
 
 String _blockLabel(String id) => switch (id) {
       'bodycomp' => ExtraStrings.bodyCompTitle,
+      'quicklog' => ExtraStrings.quickLogTitle,
       'weekdays' => t.homeOrderWeekdays,
+      'focus' => t.homeCardFocus,
       'steps' => t.homeCardSteps,
       'week' => t.homeCardWeek,
       'routines' => t.homeCardRoutines,
@@ -319,6 +322,19 @@ class _HomeSketch extends StatelessWidget {
               Expanded(child: _bar(22, 7, gc.sage.withValues(alpha: 0.75))),
             ])),
       ),
+      'quicklog': (
+        fit.showQuickLog,
+        _box(34,
+            pad: const EdgeInsets.fromLTRB(9, 7, 9, 7),
+            child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                _bar(24, 5, gc.text.withValues(alpha: 0.65)),
+                const Spacer(),
+                _bar(14, 7, gc.accent.withValues(alpha: 0.85)),
+              ]),
+              _bar(double.infinity, 7, soft),
+            ])),
+      ),
       'folders': (
         true,
         Row(children: [
@@ -354,6 +370,7 @@ class _HomeSketch extends StatelessWidget {
       ),
     };
     final byId = <String, (bool, Widget)>{
+      'focus': blocks[0],
       'weekdays': blocks[1],
       'steps': blocks[2],
       'week': blocks[3],
@@ -363,7 +380,6 @@ class _HomeSketch extends StatelessWidget {
       ...extra,
     };
     final shown = [
-      blocks[0],
       for (final id in fit.homeOrderShown) ?byId[id],
     ];
     return ExcludeSemantics(

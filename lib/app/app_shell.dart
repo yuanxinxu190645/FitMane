@@ -200,18 +200,14 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver, Single
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final food = text.contains(kFoodAiTag) ? parseFoodAi(text) : null;
-      if (food != null) {
-        fit.setNutritionBeta(true);
+      if (fit.nutritionBeta && food != null) {
         if (fit.route != 'nutrition') fit.goNutrition();
         showFoodEditor(context, pick: food);
         return;
       }
-      if (fit.isMealPlanText(text)) {
+      if (fit.nutritionBeta && fit.isMealPlanText(text)) {
         final n = fit.importMealPlans(text);
-        if (n > 0) {
-          fit.setNutritionBeta(true);
-          fit.goNutrition();
-        }
+        if (n > 0) fit.goNutrition();
         showMealPlanImportResult(context, n);
         return;
       }

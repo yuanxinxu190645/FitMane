@@ -23,6 +23,7 @@ import '../widgets/exercise_media.dart';
 import '../widgets/glass.dart';
 import '../widgets/home_folder.dart';
 import '../widgets/liquid_notch.dart';
+import '../widgets/quick_log_card.dart';
 import '../widgets/routine_folder.dart';
 import '../widgets/scroll_away.dart';
 import '../widgets/steps_card.dart';
@@ -57,14 +58,7 @@ class HomeScreen extends StatelessWidget {
             _topBar(context, gc),
             _updateBanner(context, gc),
             const SizedBox(height: 20),
-            if (fit.showFocus || fit.todayRoutine?.exerciseIds.isNotEmpty == true) ...[
-              ScrollAway(radius: 26, child: _hero(context, gc)),
-              const SizedBox(height: 14),
-            ],
-            if (fit.photoDue) ...[
-              const SizedBox(height: 14),
-              _away(_photoNudge(gc)),
-            ],
+            if (fit.photoDue) _away(_photoNudge(gc)),
             ..._homeBlocks(context, gc, routines, recommended),
           ]),
         ),
@@ -79,10 +73,20 @@ class HomeScreen extends StatelessWidget {
     Widget one(List<Widget> b) =>
         b.length == 1 ? b.single : Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: b);
     final year = fit.heatmapYear;
-    const slots = {'bodycomp': 0, 'weekdays': 1, 'routines': 1, 'folders': 0, 'week': 2, 'nutrition': 2, 'steps': 2, 'activity': 2};
-    final hero = fit.showFocus || fit.todayRoutine?.exerciseIds.isNotEmpty == true;
+    const slots = {
+      'bodycomp': 0,
+      'quicklog': 0,
+      'focus': 0,
+      'weekdays': 1,
+      'routines': 1,
+      'folders': 0,
+      'week': 2,
+      'nutrition': 2,
+      'steps': 2,
+      'activity': 2,
+    };
     bool shown(String id) => blocks[id]?.isNotEmpty ?? false;
-    final fixed = hero &&
+    final fixed = shown('focus') &&
         listEquals(fit.homeOrderShown, kHomeBlocks) &&
         const ['weekdays', 'week', 'routines', 'folders', 'nutrition', 'activity'].every(shown);
     final tiles = <Widget>[];
@@ -91,7 +95,6 @@ class HomeScreen extends StatelessWidget {
       tiles.add(w);
       wraps.add(wrap);
     }
-    if (hero) add(_hero(context, gc), (c) => FlowSlot(column: fixed ? 0 : null, child: c));
     if (fit.photoDue) add(_photoNudge(gc), (c) => FlowSlot(column: fixed ? 0 : null, child: c));
     final ids = fixed
         ? [
@@ -165,10 +168,10 @@ class HomeScreen extends StatelessWidget {
     for (final id in fit.homeOrderShown) {
       final b = blocks[id];
       if (b == null || b.isEmpty) continue;
-      final card = id == 'bodycomp' || id == 'weekdays' || id == 'steps';
+      final card = id == 'bodycomp' || id == 'quicklog' || id == 'weekdays' || id == 'focus' || id == 'steps';
       final gap = last == null
           ? (fit.photoDue ? (card ? 14.0 : 30.0) : (card ? 0.0 : 16.0))
-          : (card && (last == 'bodycomp' || last == 'weekdays' || last == 'steps'))
+          : (card && (last == 'bodycomp' || last == 'quicklog' || last == 'weekdays' || last == 'focus' || last == 'steps'))
               ? 14.0
               : id == 'nutrition' && last == 'folders'
                   ? 12.0
@@ -186,7 +189,14 @@ class HomeScreen extends StatelessWidget {
       'bodycomp': [
             if (fit.showBodyComp) _away(const BodyCompCard()),
       ],
+      'quicklog': [
+            if (fit.showQuickLog) _away(const QuickLogCard()),
+      ],
       'weekdays': [_away(_weekCard(context, gc))],
+      'focus': [
+            if (fit.showFocus || fit.todayRoutine?.exerciseIds.isNotEmpty == true)
+              ScrollAway(radius: 26, child: _hero(context, gc)),
+      ],
       'steps': [
             if (fit.stepsOn && fit.stepsAvailable) _away(StepsCard()),
       ],
