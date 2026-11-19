@@ -45,9 +45,9 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
     return sorted.map((e) => e.kg).toList();
   }
 
-  void addBodyweight(double kg, {String note = ''}) {
-    bodyweight.add(BodyweightEntry(DateTime.now(), _round3(kg), note: note.trim()));
-    profile.weightKg = _round3(kg);
+  void addBodyweight(double kg, {String note = '', DateTime? date}) {
+    bodyweight.add(BodyweightEntry(date ?? DateTime.now(), _round3(kg), note: note.trim()));
+    profile.weightKg = latestBodyweight?.kg ?? _round3(kg);
     _seedCalculatorsFromProfile();
     _persist();
     notifyListeners();

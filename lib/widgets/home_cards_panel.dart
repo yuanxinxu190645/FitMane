@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 
+import '../l10n/extra_strings.dart';
 import '../l10n/l10n.dart';
 import '../state/fit_state.dart';
 import '../theme/app_colors.dart';
@@ -19,6 +20,7 @@ class HomeCardsPanel extends StatelessWidget {
     final gc = context.gc;
     final rows = <(String, bool, VoidCallback)>[
       (t.homeCardFocus, fit.showFocus, fit.toggleFocusCard),
+      (ExtraStrings.bodyCompTitle, fit.showBodyComp, fit.toggleBodyComp),
       if (fit.stepsAvailable) (t.homeCardSteps, fit.stepsOn, onSteps),
       (t.homeCardWeek, fit.showWeekStats, fit.toggleWeekStats),
       (t.homeCardRoutines, fit.showRoutineRow, fit.toggleRoutineRow),
@@ -103,6 +105,7 @@ class HomeCardsPanel extends StatelessWidget {
 }
 
 String _blockLabel(String id) => switch (id) {
+      'bodycomp' => ExtraStrings.bodyCompTitle,
       'weekdays' => t.homeOrderWeekdays,
       'steps' => t.homeCardSteps,
       'week' => t.homeCardWeek,
@@ -306,6 +309,16 @@ class _HomeSketch extends StatelessWidget {
       ),
     ];
     final extra = <String, (bool, Widget)>{
+      'bodycomp': (
+        fit.showBodyComp,
+        _box(32,
+            pad: const EdgeInsets.fromLTRB(9, 7, 9, 7),
+            child: Row(children: [
+              Expanded(child: _bar(28, 7, gc.accent.withValues(alpha: 0.75))),
+              const SizedBox(width: 8),
+              Expanded(child: _bar(22, 7, gc.sage.withValues(alpha: 0.75))),
+            ])),
+      ),
       'folders': (
         true,
         Row(children: [

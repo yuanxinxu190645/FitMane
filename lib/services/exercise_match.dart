@@ -1,6 +1,7 @@
 import '../catalog/exercise_aliases.dart';
 import '../catalog/exercise_catalog.dart' show kFilterMuscles;
 import '../models/exercise.dart';
+import 'chinese_aliases.dart';
 
 const _stop = {'the', 'a', 'an', 'with', 'on', 'to', 'and', 'or', 'in', 'for', 'v', 'var'};
 
@@ -93,6 +94,7 @@ ExerciseFilter exerciseSearch(String query) {
     final label = exerciseName(e);
     if (e.name.toLowerCase().contains(plain) || label.toLowerCase().contains(plain)) return true;
     if (e.aliases.any((a) => a.toLowerCase().contains(plain))) return true;
+    if (matchesChineseExerciseQuery(plain, e)) return true;
     if (key.isEmpty) return false;
     if (_keyOf(e.name).contains(key) || _keyOf(label).contains(key)) return true;
     if (e.aliases.any((a) => _keyOf(a).contains(key))) return true;

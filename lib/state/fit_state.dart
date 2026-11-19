@@ -121,7 +121,7 @@ class FitState extends FitCore
         profile.name = kDefaultName;
       }
 
-      themePref = _themeFrom(data, fallback: 'dark');
+      themePref = _themeFrom(data, fallback: 'system');
       units = data['units'] as String? ?? 'kg';
 
       _applyLanguage(data['language'] as String? ?? language);
@@ -290,6 +290,7 @@ class FitState extends FitCore
     plateBar = (data['plateBar'] as num?)?.toDouble();
     _builtInExercises = null;
     bgDim = (data['bgDim'] as num?)?.toDouble() ?? 0.55;
+    showBodyComp = data['showBodyComp'] as bool? ?? true;
     showFocus = data['showFocus'] as bool? ?? true;
     showRecommended = data['showRecs'] as bool? ?? true;
     showWeekStats = data['showWeek'] as bool? ?? true;
@@ -575,6 +576,7 @@ class FitState extends FitCore
         'bg': bgPattern,
         'heatTone': heatTone,
         'bgDim': bgDim,
+        'showBodyComp': showBodyComp,
         'showFocus': showFocus,
         'showRecs': showRecommended,
         'showWeek': showWeekStats,
@@ -809,6 +811,8 @@ class FitState extends FitCore
     sessionPicks.clear();
     selectedMuscles.clear();
     profile = Profile();
+    themePref = 'system';
+    showBodyComp = true;
     showFocus = true;
     showRecommended = true;
     textSize = 'normal';
@@ -1489,6 +1493,21 @@ class FitState extends FitCore
         popRoute();
     }
     return true;
+  }
+
+  void addBodyComposition({
+    double? displayWeight,
+    double? bodyFatPct,
+    DateTime? date,
+    String note = '',
+  }) {
+    final when = date ?? DateTime.now();
+    if (displayWeight != null && displayWeight > 0) {
+      addBodyweight(fromDisplayWeight(displayWeight), note: note, date: when);
+    }
+    if (bodyFatPct != null && bodyFatPct > 0 && bodyFatPct < 80) {
+      addMeasure('bodyfat', bodyFatPct, date: when, note: note);
+    }
   }
 
   void goAbout() => pushRoute('about');

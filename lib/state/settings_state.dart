@@ -2,10 +2,10 @@ part of 'fit_state.dart';
 
 const String kBgPhotoId = 'bg';
 
-const List<String> kHomeBlocks = ['weekdays', 'steps', 'week', 'routines', 'activity', 'recommended', 'folders', 'nutrition'];
+const List<String> kHomeBlocks = ['bodycomp', 'weekdays', 'steps', 'week', 'routines', 'activity', 'recommended', 'folders', 'nutrition'];
 
 mixin SettingsState on FitCore, ToolsState, LibraryState {
-  String themePref = 'dark';
+  String themePref = 'system';
 
   bool get dark => themePref == 'system'
       ? PlatformDispatcher.instance.platformBrightness == Brightness.dark
@@ -35,6 +35,7 @@ mixin SettingsState on FitCore, ToolsState, LibraryState {
 
   String bgPattern = 'dots';
   double bgDim = 0.55;
+  bool showBodyComp = true;
   bool showFocus = true;
   bool showRecommended = true;
   bool showWeekStats = true;
@@ -624,6 +625,12 @@ mixin SettingsState on FitCore, ToolsState, LibraryState {
     final current = toDisplayWeight(progressFor(exerciseId) ?? 0);
     final next = (current + dir * weightStep / 2).clamp(weightStep / 2, weightStep * 8);
     progressStep[exerciseId] = fromDisplayWeight(next);
+    _persist();
+    notifyListeners();
+  }
+
+  void toggleBodyComp() {
+    showBodyComp = !showBodyComp;
     _persist();
     notifyListeners();
   }

@@ -1,5 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
@@ -28,7 +31,6 @@
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
     <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
     <uses-permission android:name="android.permission.health.WRITE_EXERCISE"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove"/>
 
     <uses-sdk tools:overrideLibrary="androidx.wear.tiles, androidx.wear.protolayout, androidx.wear.protolayout.expression, androidx.wear.protolayout.expression.pipeline,androidx.wear.protolayout.proto, androidx.wear.watchface.complications.datasource, androidx.wear.watchface.complications.data, androidx.wear.watchface.complications, androidx.wear.watchface.complications.data.source, androidx.wear.watchface.data, androidx.wear.watchface.style.data"/>
 
@@ -38,7 +40,7 @@
     <uses-feature android:name="android.hardware.bluetooth" android:required="false"/>
 
     <application
-        android:label="GymMane"
+        android:label="FitMane"
         android:name=".GymManeApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -119,7 +121,7 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher"
-            android:label="GymMane"
+            android:label="FitMane"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -135,7 +137,7 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_light"
             android:roundIcon="@mipmap/ic_launcher_light"
-            android:label="GymMane"
+            android:label="FitMane"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -151,7 +153,7 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_sand"
             android:roundIcon="@mipmap/ic_launcher_sand"
-            android:label="GymMane"
+            android:label="FitMane"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -167,7 +169,7 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_graphite"
             android:roundIcon="@mipmap/ic_launcher_graphite"
-            android:label="GymMane"
+            android:label="FitMane"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -183,7 +185,7 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_sage"
             android:roundIcon="@mipmap/ic_launcher_sage"
-            android:label="GymMane"
+            android:label="FitMane"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -199,7 +201,7 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_night"
             android:roundIcon="@mipmap/ic_launcher_night"
-            android:label="GymMane"
+            android:label="FitMane"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -215,7 +217,7 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_material"
             android:roundIcon="@mipmap/ic_launcher_material"
-            android:label="GymMane"
+            android:label="FitMane"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -231,7 +233,7 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_medal"
             android:roundIcon="@mipmap/ic_launcher_medal"
-            android:label="GymMane"
+            android:label="FitMane"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -247,7 +249,7 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_glass"
             android:roundIcon="@mipmap/ic_launcher_glass"
-            android:label="GymMane"
+            android:label="FitMane"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -263,7 +265,7 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_stopwatch"
             android:roundIcon="@mipmap/ic_launcher_stopwatch"
-            android:label="GymMane"
+            android:label="FitMane"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -279,7 +281,7 @@
             android:exported="true"
             android:icon="@mipmap/ic_launcher_marble"
             android:roundIcon="@mipmap/ic_launcher_marble"
-            android:label="GymMane"
+            android:label="FitMane"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -425,6 +427,16 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updater.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/updater_file_paths" />
+        </provider>
 
         <meta-data
             android:name="flutterEmbedding"

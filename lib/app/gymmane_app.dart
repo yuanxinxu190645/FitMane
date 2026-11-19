@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import '../l10n/extra_strings.dart';
 import '../l10n/l10n.dart';
 import '../state/fit_state.dart';
 import '../theme/app_colors.dart';
@@ -43,7 +44,7 @@ class _GymManeAppState extends State<GymManeApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        title: 'GymMane',
+        title: ExtraStrings.appName,
         debugShowCheckedModeBanner: false,
         scrollBehavior: kIsWeb ? const _WebScroll() : null,
         theme: AppTheme.light,

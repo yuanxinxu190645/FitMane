@@ -4,14 +4,17 @@ import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../catalog/exercise_catalog.dart';
+import '../l10n/extra_strings.dart';
 import '../l10n/l10n.dart';
+import '../services/app_updater.dart';
 import '../state/fit_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../widgets/entrance.dart';
 import '../widgets/ui_kit.dart';
+import '../widgets/update_sheet.dart';
 
-const kAppVersion = '2.4.0';
+const kAppVersion = '2.4.1';
 const _kAuthor = 'InlitX';
 const _kAuthorUrl = 'https://github.com/InlitX';
 const _kRepoUrl = 'https://github.com/InlitX/GymMane';
@@ -26,7 +29,7 @@ class AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final gc = context.gc;
     if (embedded) {
-      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: riseAll(_content(gc)));
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: riseAll(_content(context, gc)));
     }
     return RiseScope(
       id: 'about',
@@ -46,7 +49,7 @@ class AboutScreen extends StatelessWidget {
               titleSpacing: 1,
             ),
             const SizedBox(height: 18),
-            ..._content(gc),
+            ..._content(context, gc),
           ]),
         ),
       ),
@@ -54,9 +57,11 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  List<Widget> _content(GymColors gc) => [
+  List<Widget> _content(BuildContext context, GymColors gc) => [
             _hero(gc),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
+            _updateRow(context, gc),
+            const SizedBox(height: 18),
             _group(gc, [
               (PhosphorIconsRegular.gift, t.freeForever, t.freeForeverWhy),
               kIsWeb
@@ -84,9 +89,63 @@ class AboutScreen extends StatelessWidget {
   Widget _sectionLabel(GymColors gc, String label) => Text(label.toUpperCase(),
       style: AppTheme.f(10.5, weight: FontWeight.w700, color: gc.textTertiary, letterSpacing: 1.4));
 
+  Widget _updateRow(BuildContext context, GymColors gc) {
+    return AnimatedBuilder(
+      animation: AppUpdater.instance,
+      builder: (context, _) {
+        final upd = AppUpdater.instance;
+        return Pressable(
+          scale: 0.985,
+          onTap: () => showUpdateSheet(context),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: gc.bgRaised,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 14),
+                  child: SizedBox(
+                    width: 22,
+                    child: Icon(
+                      PhosphorIconsRegular.arrowCircleDown,
+                      size: 19,
+                      color: upd.hasUpdate ? gc.accent : gc.textSecondary,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ExtraStrings.appUpdatesTitle,
+                        style: AppTheme.f(14.5, weight: FontWeight.w600, color: gc.text),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        upd.hasUpdate
+                            ? ExtraStrings.newVersionBanner('v${upd.latest!.displayVersion}')
+                            : ExtraStrings.appUpdatesHint,
+                        style: AppTheme.f(12, weight: FontWeight.w500, color: gc.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(PhosphorIconsRegular.caretRight, size: 15, color: gc.textTertiary),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _hero(GymColors gc) {
     return Container(
-      height: 178,
+      height: 192,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: gc.bgRaised,
@@ -127,9 +186,9 @@ class AboutScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('GymMane',
+                Text(ExtraStrings.appName,
                     style: AppTheme.f(33, weight: FontWeight.w800, color: gc.text, letterSpacing: -0.5)),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
                   decoration: BoxDecoration(
@@ -138,6 +197,11 @@ class AboutScreen extends StatelessWidget {
                   ),
                   child: Text(t.version(kAppVersion),
                       style: AppTheme.f(11.5, weight: FontWeight.w600, color: gc.textSecondary)),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  ExtraStrings.attribution,
+                  style: AppTheme.f(11.5, weight: FontWeight.w600, color: gc.textTertiary),
                 ),
               ],
             ),
@@ -196,8 +260,9 @@ class AboutScreen extends StatelessWidget {
 
   Widget _credits(GymColors gc) {
     final rows = <(IconData, String, String, String, Color?)>[
+      (PhosphorIconsRegular.githubLogo, ExtraStrings.projectRepoLabel, ExtraStrings.repoSlug, ExtraStrings.repoUrl, gc.accent),
       (PhosphorIconsFill.heart, t.madeWithLoveBy, _kAuthor, _kAuthorUrl, gc.accent),
-      (PhosphorIconsRegular.githubLogo, t.sourceCode, 'InlitX/GymMane', _kRepoUrl, null),
+      (PhosphorIconsRegular.githubLogo, ExtraStrings.upstreamRepoLabel, ExtraStrings.upstreamSlug, _kRepoUrl, null),
       (PhosphorIconsRegular.coffee, t.buyCoffee, 'ko-fi.com/inlitx', _kKofiUrl, null),
     ];
     return Container(

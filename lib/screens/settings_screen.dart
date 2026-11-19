@@ -14,8 +14,10 @@ import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../app/desktop.dart';
+import '../l10n/extra_strings.dart';
 import '../l10n/l10n.dart';
 import '../models/profile.dart';
+import '../services/app_updater.dart';
 import '../services/graphics_mode.dart';
 import '../services/alarm_store.dart';
 import '../services/auto_backup.dart';
@@ -58,6 +60,7 @@ import '../widgets/steps_card.dart';
 import '../widgets/svg_icon.dart';
 import '../widgets/timer_panel.dart';
 import '../widgets/ui_kit.dart';
+import '../widgets/update_sheet.dart';
 import '../widgets/voice_sheet.dart';
 import '../widgets/widget_showcase.dart';
 import 'profile_screen.dart';
@@ -274,6 +277,44 @@ class SettingsScreen extends StatelessWidget {
               () => fit.textSize,
               fit.setTextSize,
               hint: t.textSizeHint,
+            ),
+            AnimatedBuilder(
+              animation: AppUpdater.instance,
+              builder: (context, _) {
+                final upd = AppUpdater.instance;
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => showUpdateSheet(context),
+                  child: _prefRow(
+                    gc,
+                    PhosphorIconsRegular.arrowCircleDown,
+                    ExtraStrings.appUpdatesTitle,
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (upd.hasUpdate)
+                        Container(
+                          margin: const EdgeInsetsDirectional.only(end: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: gc.accentSoft,
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: Text(
+                            'v${upd.latest!.displayVersion}',
+                            style: AppTheme.d(11, weight: FontWeight.w700, color: gc.accent),
+                          ),
+                        )
+                      else
+                        Text(
+                          'v${upd.currentVersion}',
+                          style: AppTheme.d(12.5, weight: FontWeight.w600, color: gc.textSecondary),
+                        ),
+                      const SizedBox(width: 6),
+                      Icon(PhosphorIconsRegular.caretRight, size: 15, color: gc.textTertiary),
+                    ]),
+                    hint: ExtraStrings.appUpdatesHint,
+                  ),
+                );
+              },
             ),
           ]),
           const SizedBox(height: 22),
@@ -905,6 +946,7 @@ class SettingsScreen extends StatelessWidget {
         if (AppIcon.available) (t.appIcon, PhosphorIconsRegular.appWindow),
         (t.perfSetting, PhosphorIconsRegular.lightning),
         (t.textSizeSetting, PhosphorIconsRegular.textAa),
+        (ExtraStrings.appUpdatesTitle, PhosphorIconsRegular.arrowCircleDown),
       ]),
       _Category('training', PhosphorIconsRegular.barbell, _sectionTitle('training'), [
         (t.restTimer, PhosphorIconsRegular.timer),

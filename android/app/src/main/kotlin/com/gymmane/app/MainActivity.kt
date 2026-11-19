@@ -181,6 +181,7 @@ class MainActivity : FlutterActivity() {
         WearSurfaces.attach(this, MethodChannel(messenger, WearSurfaces.CHANNEL))
         WatchLinkBridge.attach(this, MethodChannel(messenger, WatchLinkBridge.CHANNEL))
         QuickTiles.attach(this, MethodChannel(messenger, QuickTiles.CHANNEL))
+        UpdateBridge.attach(this, MethodChannel(messenger, UpdateBridge.CHANNEL))
     }
 
     private fun currentDisplay(): android.view.Display? =

@@ -1,28 +1,34 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'history_screen.dart';
 import '../widgets/body_map.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 
 import '../app/desktop.dart';
 import '../widgets/medal.dart' show Medal;
+import '../l10n/extra_strings.dart';
 import '../l10n/l10n.dart';
 import '../models/exercise.dart';
 import '../models/workout.dart';
+import '../services/app_updater.dart';
 import '../state/fit_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../widgets/body_comp_card.dart';
 import '../widgets/charts.dart';
 import '../widgets/day_off_sheet.dart';
 import '../widgets/entrance.dart';
 import '../widgets/exercise_media.dart';
 import '../widgets/glass.dart';
 import '../widgets/home_folder.dart';
+import '../widgets/liquid_notch.dart';
 import '../widgets/routine_folder.dart';
 import '../widgets/scroll_away.dart';
 import '../widgets/steps_card.dart';
 import '../widgets/svg_icon.dart';
 import '../widgets/ui_kit.dart';
+import '../widgets/update_sheet.dart';
 import 'progress_screen.dart';
 import 'routines_screen.dart';
 import 'start_sheet.dart';
@@ -48,7 +54,8 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: riseAll([
-            _topBar(gc),
+            _topBar(context, gc),
+            _updateBanner(context, gc),
             const SizedBox(height: 20),
             if (fit.showFocus || fit.todayRoutine?.exerciseIds.isNotEmpty == true) ...[
               ScrollAway(radius: 26, child: _hero(context, gc)),
@@ -72,7 +79,7 @@ class HomeScreen extends StatelessWidget {
     Widget one(List<Widget> b) =>
         b.length == 1 ? b.single : Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: b);
     final year = fit.heatmapYear;
-    const slots = {'weekdays': 1, 'routines': 1, 'folders': 0, 'week': 2, 'nutrition': 2, 'steps': 2, 'activity': 2};
+    const slots = {'bodycomp': 0, 'weekdays': 1, 'routines': 1, 'folders': 0, 'week': 2, 'nutrition': 2, 'steps': 2, 'activity': 2};
     final hero = fit.showFocus || fit.todayRoutine?.exerciseIds.isNotEmpty == true;
     bool shown(String id) => blocks[id]?.isNotEmpty ?? false;
     final fixed = hero &&
@@ -116,7 +123,8 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Rise(index: 0, child: _topBar(gc)),
+            Rise(index: 0, child: _topBar(context, gc)),
+            _updateBanner(context, gc),
             const SizedBox(height: 26),
             CardFlow(minColumn: 340, gap: 22, children: [
               for (var i = 0; i < risen.length; i++) wraps[i](risen[i]),
@@ -157,10 +165,10 @@ class HomeScreen extends StatelessWidget {
     for (final id in fit.homeOrderShown) {
       final b = blocks[id];
       if (b == null || b.isEmpty) continue;
-      final card = id == 'weekdays' || id == 'steps';
+      final card = id == 'bodycomp' || id == 'weekdays' || id == 'steps';
       final gap = last == null
           ? (fit.photoDue ? (card ? 14.0 : 30.0) : (card ? 0.0 : 16.0))
-          : (card && (last == 'weekdays' || last == 'steps'))
+          : (card && (last == 'bodycomp' || last == 'weekdays' || last == 'steps'))
               ? 14.0
               : id == 'nutrition' && last == 'folders'
                   ? 12.0
@@ -175,6 +183,9 @@ class HomeScreen extends StatelessWidget {
   Map<String, List<Widget>> _blockMap(
       BuildContext context, GymColors gc, List<Routine> routines, List<Exercise> recommended) {
     return <String, List<Widget>>{
+      'bodycomp': [
+            if (fit.showBodyComp) _away(const BodyCompCard()),
+      ],
       'weekdays': [_away(_weekCard(context, gc))],
       'steps': [
             if (fit.stepsOn && fit.stepsAvailable) _away(StepsCard()),
@@ -303,7 +314,86 @@ class HomeScreen extends StatelessWidget {
         dim: 0,
       );
 
-  Widget _topBar(GymColors gc) {
+  Widget _updateBanner(BuildContext context, GymColors gc) {
+    return AnimatedBuilder(
+      animation: AppUpdater.instance,
+      builder: (context, _) {
+        final upd = AppUpdater.instance;
+        if (!upd.hasUpdateBanner || upd.latest == null) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Pressable(
+            scale: 0.985,
+            onTap: () => showUpdateSheet(context, autoCheckIfIdle: false),
+            child: SoftCard(
+              radius: 18,
+              color: gc.accentSoft,
+              borderColor: gc.accent.withValues(alpha: 0.35),
+              padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+              child: Row(
+                children: [
+                  Icon(PhosphorIconsFill.arrowCircleDown, size: 18, color: gc.accent),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      ExtraStrings.newVersionBanner('v${upd.latest!.displayVersion}'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTheme.f(13, weight: FontWeight.w700, color: gc.text),
+                    ),
+                  ),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: upd.dismissBanner,
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(PhosphorIconsRegular.x, size: 14, color: gc.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _themeBtn(BuildContext context, GymColors gc) {
+    final (icon, next) = switch (fit.themePref) {
+      'system' => (PhosphorIconsRegular.circleHalf, 'light'),
+      'light' => (PhosphorIconsRegular.sun, 'dark'),
+      _ => (PhosphorIconsRegular.moon, 'system'),
+    };
+    return Pressable(
+      scale: 0.92,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        fit.setThemePref(next);
+        final nextIcon = switch (next) {
+          'system' => PhosphorIconsFill.circleHalf,
+          'light' => PhosphorIconsFill.sun,
+          _ => PhosphorIconsFill.moon,
+        };
+        showNotchToast(
+          context,
+          ExtraStrings.themeSwitchToast(next),
+          icon: nextIcon,
+          accent: gc.accent,
+        );
+      },
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(color: gc.bgRaised, shape: BoxShape.circle),
+        child: Icon(icon, size: 17, color: gc.textSecondary),
+      ),
+    );
+  }
+
+  Widget _topBar(BuildContext context, GymColors gc) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -325,7 +415,9 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
+        _themeBtn(context, gc),
+        const SizedBox(width: 8),
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: fit.goProgress,

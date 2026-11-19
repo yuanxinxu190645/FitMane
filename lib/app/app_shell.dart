@@ -37,6 +37,7 @@ import '../screens/timeline_screen.dart';
 import '../screens/tool_detail_screen.dart';
 import '../screens/tools_screen.dart';
 import '../screens/train_screen.dart';
+import '../services/app_updater.dart';
 import '../services/auto_backup.dart';
 import '../services/device_kind.dart';
 import '../services/health_steps.dart';
@@ -142,6 +143,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver, Single
       if (await HealthSteps.takeUsage()) _showStepsInfo();
       await fit.readDisplay();
       await _offerLiteMode();
+      unawaited(AppUpdater.instance.initAndMaybeCheck());
     });
   }
 
