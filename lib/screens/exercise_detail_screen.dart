@@ -848,7 +848,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      ExtraStrings.quickLogTitle,
+                      ExtraStrings.quickWorkoutTitle,
                       style: AppTheme.f(11.5, weight: FontWeight.w500, color: gc.textSecondary),
                     ),
                   ],

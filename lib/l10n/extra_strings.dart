@@ -129,7 +129,7 @@ class ExtraStrings {
   static String get tapChartHint => _zh ? '点击或滑动图表查看具体日期数值' : 'Tap chart points to inspect values';
 
   // Quick daily log mode
-  static String get quickLogTitle => _zh ? '今日训练记录' : 'Quick Training Log';
+  static String get quickWorkoutTitle => _zh ? '今日训练记录' : 'Quick Training Log';
   static String get quickLogEmptyHint =>
       _zh ? '无需先开计划，随时搜动作加入今天并记录组数与重量' : 'Search any exercise to log sets & weights directly';
   static String get quickLogAddExercise => _zh ? '添加动作' : 'Add exercise';

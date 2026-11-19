@@ -155,7 +155,7 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
                 const SheetHandle(),
                 const SizedBox(height: 14),
                 SheetTitle(
-                  ExtraStrings.quickLogTitle,
+                  ExtraStrings.quickWorkoutTitle,
                   subtitle: entries.isNotEmpty
                       ? ExtraStrings.quickLogSummary(entries.length, totalSets)
                       : ExtraStrings.quickLogEmptyHint,

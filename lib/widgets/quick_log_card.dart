@@ -64,7 +64,7 @@ class QuickLogCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  ExtraStrings.quickLogTitle.toUpperCase(),
+                  ExtraStrings.quickWorkoutTitle.toUpperCase(),
                   style: kickerStyle(gc),
                 ),
                 const SizedBox(width: 6),

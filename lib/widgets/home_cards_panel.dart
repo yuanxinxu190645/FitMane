@@ -20,7 +20,7 @@ class HomeCardsPanel extends StatelessWidget {
     final gc = context.gc;
     final rows = <(String, bool, VoidCallback)>[
       (ExtraStrings.bodyCompTitle, fit.showBodyComp, fit.toggleBodyComp),
-      (ExtraStrings.quickLogTitle, fit.showQuickLog, fit.toggleQuickLog),
+      (ExtraStrings.quickWorkoutTitle, fit.showQuickLog, fit.toggleQuickLog),
       (t.homeCardFocus, fit.showFocus, fit.toggleFocusCard),
       if (fit.stepsAvailable) (t.homeCardSteps, fit.stepsOn, onSteps),
       (t.homeCardWeek, fit.showWeekStats, fit.toggleWeekStats),
@@ -107,7 +107,7 @@ class HomeCardsPanel extends StatelessWidget {
 
 String _blockLabel(String id) => switch (id) {
       'bodycomp' => ExtraStrings.bodyCompTitle,
-      'quicklog' => ExtraStrings.quickLogTitle,
+      'quicklog' => ExtraStrings.quickWorkoutTitle,
       'weekdays' => t.homeOrderWeekdays,
       'focus' => t.homeCardFocus,
       'steps' => t.homeCardSteps,
