@@ -8,8 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String kDefaultUpdateRepo = 'yuanxinxu190645/FitMane';
-const String kCurrentAppVersion = '2.4.3';
-const int kCurrentAppBuild = 18;
+const String kCurrentAppVersion = '2.4.4';
+const int kCurrentAppBuild = 19;
 
 class ReleaseAsset {
   const ReleaseAsset({
@@ -87,9 +87,11 @@ class AppUpdater extends ChangeNotifier {
   static const _kAuto = 'fitmane_upd_auto';
   static const _kLastCheck = 'fitmane_upd_last_check';
   static const _kDismissed = 'fitmane_upd_dismissed_tag';
-  static const Duration _autoCooldown = Duration(hours: 12);
+  static const Duration _autoCooldown = Duration(minutes: 15);
+  static const Duration _coldStartCooldown = Duration(minutes: 2);
 
   bool _initialized = false;
+  bool _promptedThisLaunch = false;
   String repo = kDefaultUpdateRepo;
   String proxy = '';
   String token = '';
@@ -116,6 +118,33 @@ class AppUpdater extends ChangeNotifier {
 
   bool get hasUpdateBanner =>
       hasUpdate && dismissedTag != latest!.tagName;
+
+  /// True when an un-skipped newer release is ready to prompt automatically
+  /// and this launch has not yet been prompted or deferred.
+  bool get shouldAutoPrompt =>
+      autoCheck &&
+      hasUpdateBanner &&
+      !_promptedThisLaunch &&
+      status != UpdateStatus.downloading;
+
+  void markPromptedThisLaunch() {
+    if (_promptedThisLaunch) return;
+    _promptedThisLaunch = true;
+    notifyListeners();
+  }
+
+  Future<void> skipCurrentUpdate() async {
+    _promptedThisLaunch = true;
+    await dismissBanner();
+  }
+
+  @visibleForTesting
+  void resetPromptStateForTest() {
+    _promptedThisLaunch = false;
+    dismissedTag = '';
+    autoCheck = true;
+    status = UpdateStatus.idle;
+  }
 
   /// Compares two version strings (`remote` vs `current`).
   /// Returns > 0 when [remote] is newer, 0 when equal, < 0 when older.
@@ -239,10 +268,11 @@ class AppUpdater extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> initAndMaybeCheck() async {
+  Future<bool> initAndMaybeCheck({bool coldStart = true}) async {
     await init();
-    if (!supported || !autoCheck) return;
-    await checkForUpdate(silent: true);
+    if (!supported || !autoCheck) return false;
+    await checkForUpdate(silent: true, coldStart: coldStart);
+    return shouldAutoPrompt;
   }
 
   Future<void> saveSettings({
@@ -263,6 +293,7 @@ class AppUpdater extends ChangeNotifier {
       downloadedApkPath = null;
       status = UpdateStatus.idle;
       errorMessage = null;
+      _promptedThisLaunch = false;
     }
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -285,13 +316,18 @@ class AppUpdater extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> checkForUpdate({bool silent = false}) async {
+  Future<void> checkForUpdate({
+    bool silent = false,
+    bool coldStart = false,
+  }) async {
     await init();
+    if (silent && (!supported || !autoCheck)) return;
     if (status == UpdateStatus.checking || status == UpdateStatus.downloading) {
       return;
     }
     if (silent && lastCheckedAt != null) {
-      if (DateTime.now().difference(lastCheckedAt!) < _autoCooldown) {
+      final cooldown = coldStart ? _coldStartCooldown : _autoCooldown;
+      if (DateTime.now().difference(lastCheckedAt!) < cooldown) {
         return;
       }
     }

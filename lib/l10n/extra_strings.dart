@@ -209,4 +209,28 @@ class ExtraStrings {
       _zh ? '已成功导入 $n 个自定义动作' : 'Imported $n custom exercises';
   static String bulkImportDoneAndLoggedToast(int n) =>
       _zh ? '已导入 $n 个动作并加入今日训练' : 'Imported $n exercises & logged today';
+
+  static bool get isZh => _zh;
+
+  static String get updatePromptTitle =>
+      _zh ? '发现新版本' : 'New version available';
+  static String get updatePromptSubtitle => _zh
+      ? '检测到 GitHub 有新的安装包发布，可立即更新或跳过。'
+      : 'A newer GitHub release APK is ready to install or skip.';
+  static String get updateLater => _zh ? '稍后再说' : 'Later';
+  static String get skipThisVersion => _zh ? '跳过此版本' : 'Skip version';
+  static String skippedVersionToast(String tag) =>
+      _zh ? '已跳过版本 $tag' : 'Skipped $tag';
+
+  static String get exercisePacksChip => _zh ? '动作包' : 'Packs';
+  static String get exercisePacksTitle => _zh ? '扩展动作包' : 'Exercise Packs';
+  static String get exercisePacksHint => _zh
+      ? '按需开启或关闭专项动作包；关闭后已记录的历史训练仍会保留。'
+      : 'Toggle specialty exercise packs on or off. Existing workout history is always preserved.';
+  static String exercisePacksSummary(int enabledCount, int totalExercises) =>
+      _zh
+          ? '已启用 $enabledCount 个包 · 共 $totalExercises 个扩展动作'
+          : '$enabledCount packs active · $totalExercises pack exercises';
+  static String exercisePackCount(int n) =>
+      _zh ? '$n 个动作' : '$n exercises';
 }

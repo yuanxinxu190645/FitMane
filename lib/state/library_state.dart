@@ -10,10 +10,31 @@ mixin LibraryState on FitCore {
   String? activeExerciseId;
   int _customSeq = 0;
   List<Exercise>? _builtInExercises;
+  Set<String> disabledPacks = <String>{};
+
+  bool isPackEnabled(String packId) => !disabledPacks.contains(packId);
+
+  int get enabledPackCount => kExercisePacks.where((p) => isPackEnabled(p.id)).length;
+
+  int get enabledPackExerciseCount =>
+      kExercisePacks.where((p) => isPackEnabled(p.id)).fold(0, (sum, p) => sum + p.exercises.length);
+
+  void toggleExercisePack(String packId) {
+    if (!disabledPacks.remove(packId)) {
+      disabledPacks.add(packId);
+    }
+    _builtInExercises = null;
+    persistNow();
+    notifyListeners();
+  }
 
   List<Exercise> get allExercises => [
         ...(_builtInExercises ??= [
-          for (final e in [...kExercises, ...kGymPackExercises])
+          for (final e in [
+            ...kExercises,
+            for (final p in kExercisePacks)
+              if (!disabledPacks.contains(p.id)) ...p.exercises,
+          ])
             if (secondaryOverride[e.id] case final s?) e.copyWith(secondary: _cleanSecondary(e.primary, s)) else e,
         ]),
         ...customExercises,
@@ -29,7 +50,7 @@ mixin LibraryState on FitCore {
     if (i >= 0) {
       customExercises[i] = customExercises[i].copyWith(secondary: clean);
     } else {
-      final base = [...kExercises, ...kGymPackExercises].firstWhere((e) => e.id == id);
+      final base = [...kExercises, ...kAllExpansionExercises].firstWhere((e) => e.id == id);
       if (_sameMuscles(clean, _cleanSecondary(base.primary, base.secondary))) {
         secondaryOverride.remove(id);
       } else {
@@ -71,6 +92,13 @@ mixin LibraryState on FitCore {
   Exercise? exerciseById(String id) {
     for (final e in allExercises) {
       if (e.id == id) return e;
+    }
+    for (final e in kAllExpansionExercises) {
+      if (e.id == id) {
+        return secondaryOverride[e.id] case final s?
+            ? e.copyWith(secondary: _cleanSecondary(e.primary, s))
+            : e;
+      }
     }
     return null;
   }
@@ -346,7 +374,7 @@ mixin LibraryState on FitCore {
     for (final e in customExercises) {
       if (e.id == id) return e.mode;
     }
-    for (final e in kGymPackExercises) {
+    for (final e in kAllExpansionExercises) {
       if (e.id == id) return e.mode;
     }
     return kExerciseModes[id] ?? '';
@@ -360,6 +388,7 @@ mixin LibraryState on FitCore {
 
   void setExerciseMode(String id, String mode) {
     final base = customExercises.where((e) => e.id == id).map((e) => e.mode).firstOrNull ??
+        kAllExpansionExercises.where((e) => e.id == id).map((e) => e.mode).firstOrNull ??
         kExerciseModes[id] ??
         '';
     final wanted = mode == 'weight' ? '' : mode;

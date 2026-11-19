@@ -44,6 +44,7 @@ import '../widgets/auto_backup_sheet.dart';
 import '../widgets/body_rulers.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/entrance.dart';
+import '../widgets/exercise_packs_sheet.dart';
 import '../widgets/file_thumb.dart';
 import '../widgets/glass.dart';
 import '../widgets/health_cards.dart';
@@ -469,6 +470,38 @@ class SettingsScreen extends StatelessWidget {
                       },
                     ),
                     hint: ExtraStrings.quickLogDefaultSetsHint,
+                  ),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => showExercisePacksSheet(context),
+                    child: _prefRow(
+                      gc,
+                      PhosphorIconsRegular.stack,
+                      ExtraStrings.exercisePacksTitle,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${fit.enabledPackExerciseCount}',
+                            style: AppTheme.d(
+                              12.5,
+                              weight: FontWeight.w600,
+                              color: gc.accent,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            PhosphorIconsRegular.caretRight,
+                            size: 15,
+                            color: gc.textTertiary,
+                          ),
+                        ],
+                      ),
+                      hint: ExtraStrings.exercisePacksSummary(
+                        fit.enabledPackCount,
+                        fit.enabledPackExerciseCount,
+                      ),
+                    ),
                   ),
                   _choiceRow(
                     context,
@@ -990,6 +1023,7 @@ class SettingsScreen extends StatelessWidget {
         (t.changeRest, PhosphorIconsRegular.timer),
         (t.sideRest, PhosphorIconsRegular.arrowsLeftRight),
         (ExtraStrings.quickLogDefaultSetsLabel, PhosphorIconsRegular.listNumbers),
+        (ExtraStrings.exercisePacksTitle, PhosphorIconsRegular.stack),
         (t.effortSetting, PhosphorIconsRegular.gauge),
         (t.weightStepSetting, PhosphorIconsRegular.barbell),
         (t.autoProgressSetting, PhosphorIconsRegular.trendUp),

@@ -1,4 +1,5 @@
 import '../catalog/gym_pack.dart';
+import '../catalog/pro_packs.dart';
 import '../l10n/catalog_zh.dart';
 import '../l10n/l10n.dart';
 import '../models/exercise.dart';
@@ -28,6 +29,10 @@ const Map<String, List<String>> _kCnEquip = {
   '吊环': ['rings'],
   '地雷管': ['landmine'],
   '罗马椅': ['roman chair', 'hyperextension'],
+  '滑雪机': ['skierg', 'ski'],
+  '风阻': ['assault', 'air bike', 'skierg'],
+  '雪橇': ['sled', 'prowler'],
+  '六角杠': ['trap bar', 'hex bar'],
 };
 
 const Map<String, List<String>> _kCnModifiers = {
@@ -101,8 +106,15 @@ const Map<String, List<String>> _kCnMuscles = {
   '股四': ['quads'],
   '腘绳': ['hamstrings'],
   '小腿': ['calves', 'calf'],
-  '下背': ['lowerback', 'lower back', 'hyperextension'],
+  '下背': ['lowerback', 'lower back', 'hyperextension', 'erector'],
+  '竖脊肌': ['lowerback', 'back extension', 'good morning', 'rack pull'],
   '大腿': ['quads', 'hamstrings', 'leg'],
+  '肩袖': ['external rotation', 'rotator', 'pull-apart'],
+  '前锯肌': ['serratus', 'wall slide'],
+  '握力': ['pinch', 'grip', 'towel'],
+  '胫骨': ['tibialis'],
+  '比目鱼': ['soleus', 'bent-knee', 'seated calf'],
+  '髂腰肌': ['hip flexor', 'couch stretch'],
 };
 
 const Map<String, List<String>> _kCnMovements = {
@@ -193,6 +205,31 @@ const Map<String, List<String>> _kCnMovements = {
   '划船机': ['rowing'],
   '椭圆机': ['elliptical'],
   '拉伸': ['stretch'],
+  '松解': ['stretch', 'mobility', 'dorsiflexion', 'open book'],
+  '热身': ['warm', 'flow', 'inchworm', 'dislocate'],
+  '腕弯举': ['wrist curl'],
+  '伸腕': ['wrist extension'],
+  '泽奇': ['zercher'],
+  '地雷': ['landmine'],
+  '风车': ['windmill', 'pinwheel'],
+  '熊爬': ['bear crawl'],
+  '螃蟹': ['crab'],
+  '跳远': ['broad jump'],
+  '手枪': ['pistol squat'],
+  '哥萨克': ['cossack'],
+  '肩外旋': ['external rotation'],
+  '撕拉': ['pull-apart'],
+  '悬垂': ['dead hang', 'hang'],
+  '开髋': ['hip switch', 'frog', '90/90'],
+  '蚌式': ['clamshell'],
+  '埃及人': ['egyptian'],
+  '吕式': ['lu raise'],
+  '蜘蛛弯举': ['spider'],
+  '贝叶斯': ['bayesian'],
+  '拖拉弯举': ['drag curl'],
+  '泰特': ['tate press'],
+  '冲刺': ['sprint', 'interval'],
+  '双摇': ['double-under', 'double under'],
 };
 
 const Map<String, String> _kPinyinInitials = {
@@ -261,6 +298,26 @@ const Map<String, String> _kPinyinInitials = {
   'ltj': '楼梯机',
   'dc': '单车',
   'ts': '跳绳',
+  'nfz': '农夫行走',
+  'hl': '壶铃',
+  'zs': '战绳',
+  'xq': '雪橇',
+  'hxj': '滑雪机',
+  'ls': '拉伸',
+  'rs': '热身',
+  'wl': '握力',
+  'xb': '小臂',
+  'xfj': '斜方肌',
+  'sjj': '竖脊肌',
+  'fxj': '腹斜',
+  'xt': '小腿',
+  'cc': '冲刺',
+  'zq': '泽奇',
+  'lmy': '罗马椅',
+  'bys': '贝叶斯',
+  'ajr': '埃及人',
+  'zzwj': '蜘蛛弯举',
+  'jxwx': '肩外旋',
 };
 
 final RegExp _kCjkPattern = RegExp(r'[\u4e00-\u9fff]');
@@ -311,7 +368,9 @@ bool matchesChineseExerciseQuery(String rawQuery, Exercise e) {
     return false;
   }
 
-  final zhTitle = (kExerciseNameZh[e.id] ?? kGymPackNameZh[e.id] ?? e.name).toLowerCase();
+  final zhTitle =
+      (kExerciseNameZh[e.id] ?? kGymPackNameZh[e.id] ?? kProPackNameZh[e.id] ?? e.name)
+          .toLowerCase();
   final zhHaystack = '$zhTitle ${e.aliases.join(' ')}'.toLowerCase();
 
   // Path A: Direct / whitespace-split token match on Chinese title & aliases.

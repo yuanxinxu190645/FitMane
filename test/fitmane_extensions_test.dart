@@ -1,12 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymmane/catalog/exercise_catalog.dart';
 import 'package:gymmane/catalog/gym_pack.dart';
+import 'package:gymmane/catalog/pro_packs.dart';
 import 'package:gymmane/l10n/l10n.dart';
 import 'package:gymmane/models/exercise.dart';
 import 'package:gymmane/models/measure.dart';
 import 'package:gymmane/models/workout.dart';
 import 'package:gymmane/services/app_updater.dart';
 import 'package:gymmane/services/body_comp_math.dart';
+import 'package:gymmane/services/chinese_aliases.dart';
 import 'package:gymmane/services/exercise_match.dart';
 import 'package:gymmane/services/exercise_smart.dart';
 import 'package:gymmane/services/local_store.dart';
@@ -343,6 +345,108 @@ void main() {
       fit.persistNow();
       fit.loadFromStore();
       expect(fit.customExercises.map((e) => e.name), containsAll(['定制龙门架单臂侧平举', '定制上斜哑铃挤压推胸']));
+    });
+
+    test('pro_packs expands catalog to 654, toggles cleanly, and preserves history lookup', () {
+      expect(kExercisePacks, hasLength(6));
+      expect(kAllExpansionExercises, hasLength(185));
+
+      final baseIds = kExercises.map((e) => e.id).toSet();
+      final baseNames = kExercises.map((e) => e.name.toLowerCase()).toSet();
+      expect(
+        kAllExpansionExercises.where((e) => baseIds.contains(e.id)),
+        isEmpty,
+      );
+      expect(
+        kAllExpansionExercises.where((e) => baseNames.contains(e.name.toLowerCase())),
+        isEmpty,
+      );
+
+      expect(fit.enabledPackCount, 6);
+      expect(fit.enabledPackExerciseCount, 185);
+      expect(fit.allExercises, hasLength(kExercises.length + 185));
+
+      fit.toggleExercisePack('weak-points');
+      expect(fit.isPackEnabled('weak-points'), isFalse);
+      expect(fit.enabledPackCount, 5);
+      expect(fit.enabledPackExerciseCount, 185 - kWeakPointsPackExercises.length);
+      expect(
+        fit.allExercises,
+        hasLength(kExercises.length + 185 - kWeakPointsPackExercises.length),
+      );
+      expect(fit.exerciseById('pp-back-ext-weighted'), isNotNull);
+
+      fit.persistNow();
+      fit.loadFromStore();
+      expect(fit.isPackEnabled('weak-points'), isFalse);
+      expect(fit.exerciseById('pp-back-ext-weighted')?.primary, 'lowerback');
+
+      fit.toggleExercisePack('weak-points');
+      expect(fit.isPackEnabled('weak-points'), isTrue);
+      expect(fit.allExercises, hasLength(kExercises.length + 185));
+    });
+
+    test('matchesChineseExerciseQuery finds pro_packs by Chinese term and Pinyin initials', () {
+      setAppLanguage('zh');
+      addTearDown(() => setAppLanguage('en'));
+
+      final skiErg =
+          kAllExpansionExercises.firstWhere((e) => e.id == 'pp-skierg-sprint');
+      expect(matchesChineseExerciseQuery('滑雪机', skiErg), isTrue);
+      expect(matchesChineseExerciseQuery('hxj', skiErg), isTrue);
+
+      final filterSki = exerciseSearch('滑雪机');
+      expect(kAllExpansionExercises.where(filterSki).contains(skiErg), isTrue);
+
+      final filterPinBayesian = exerciseSearch('bys');
+      expect(
+        kAllExpansionExercises.where(filterPinBayesian).any((e) => e.id == 'pp-cable-bayesian-curl'),
+        isTrue,
+      );
+    });
+
+    test('AppUpdater auto-prompt defers on later, skips current tag, and wakes on newer tag', () async {
+      SharedPreferences.setMockInitialValues({});
+      final upd = AppUpdater.instance;
+      upd.resetPromptStateForTest();
+      addTearDown(() {
+        upd.latest = null;
+        upd.resetPromptStateForTest();
+      });
+
+      const rel9 = ReleaseInfo(
+        tagName: 'v9.9.9',
+        name: 'v9.9.9',
+        body: 'test notes',
+        htmlUrl: 'https://example.com',
+        publishedAt: null,
+        assets: [],
+      );
+      upd.latest = rel9;
+      expect(upd.shouldAutoPrompt, isTrue);
+
+      upd.markPromptedThisLaunch();
+      expect(upd.shouldAutoPrompt, isFalse);
+
+      upd.resetPromptStateForTest();
+      expect(upd.shouldAutoPrompt, isTrue);
+
+      await upd.skipCurrentUpdate();
+      expect(upd.dismissedTag, 'v9.9.9');
+      expect(upd.hasUpdateBanner, isFalse);
+      expect(upd.shouldAutoPrompt, isFalse);
+
+      upd.latest = const ReleaseInfo(
+        tagName: 'v9.9.10',
+        name: 'v9.9.10',
+        body: 'newer',
+        htmlUrl: 'https://example.com',
+        publishedAt: null,
+        assets: [],
+      );
+      expect(upd.hasUpdateBanner, isTrue);
+      upd.autoCheck = false;
+      expect(upd.shouldAutoPrompt, isFalse);
     });
   });
 }

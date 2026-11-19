@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
 import '../catalog/gym_pack.dart';
+import '../catalog/pro_packs.dart';
 import 'app_localizations.dart';
 import 'catalog_es.dart';
 import 'catalog_it.dart';
@@ -323,12 +324,12 @@ extension GymL10n on AppLocalizations {
 
   String catalogName(String id, String fallback) =>
       _catalogNames[appLanguage]?[id] ??
-      (appLanguage.startsWith('zh') ? kGymPackNameZh[id] : null) ??
+      (appLanguage.startsWith('zh') ? (kGymPackNameZh[id] ?? kProPackNameZh[id]) : null) ??
       fallback;
 
   List<String> catalogSteps(String id, List<String> fallback) =>
       _catalogSteps[appLanguage]?[id] ??
-      (appLanguage.startsWith('zh') ? kGymPackStepsZh[id] : null) ??
+      (appLanguage.startsWith('zh') ? (kGymPackStepsZh[id] ?? kProPackStepsZh[id]) : null) ??
       fallback;
 }
 

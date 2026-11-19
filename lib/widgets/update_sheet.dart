@@ -12,22 +12,31 @@ import 'glass.dart';
 import 'liquid_notch.dart';
 import 'ui_kit.dart';
 
-void showUpdateSheet(BuildContext context, {bool autoCheckIfIdle = true}) {
+Future<void> showUpdateSheet(
+  BuildContext context, {
+  bool autoCheckIfIdle = true,
+  bool launchPrompt = false,
+}) {
+  if (launchPrompt) {
+    AppUpdater.instance.markPromptedThisLaunch();
+  }
   if (autoCheckIfIdle &&
       (AppUpdater.instance.status == UpdateStatus.idle ||
           AppUpdater.instance.status == UpdateStatus.error)) {
     AppUpdater.instance.checkForUpdate();
   }
-  showAppSheet<void>(
+  return showAppSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const _UpdateSheet(),
+    builder: (_) => _UpdateSheet(launchPrompt: launchPrompt),
   );
 }
 
 class _UpdateSheet extends StatefulWidget {
-  const _UpdateSheet();
+  const _UpdateSheet({this.launchPrompt = false});
+
+  final bool launchPrompt;
 
   @override
   State<_UpdateSheet> createState() => _UpdateSheetState();
@@ -108,12 +117,17 @@ class _UpdateSheetState extends State<_UpdateSheet> with WidgetsBindingObserver 
         final gc = context.gc;
         final rel = _upd.latest;
         final hasNew = _upd.hasUpdate;
+        final showingLaunchPrompt = widget.launchPrompt && rel != null && hasNew;
 
         return AppSheet(
           children: [
             SheetTitle(
-              ExtraStrings.appUpdatesTitle,
-              subtitle: _formatCheckedAt(_upd.lastCheckedAt),
+              showingLaunchPrompt
+                  ? ExtraStrings.updatePromptTitle
+                  : ExtraStrings.appUpdatesTitle,
+              subtitle: showingLaunchPrompt
+                  ? ExtraStrings.updatePromptSubtitle
+                  : _formatCheckedAt(_upd.lastCheckedAt),
             ),
             const SizedBox(height: 16),
             SoftCard(
@@ -439,6 +453,82 @@ class _UpdateSheetState extends State<_UpdateSheet> with WidgetsBindingObserver 
                     HapticFeedback.selectionClick();
                     _upd.downloadAndInstall();
                   },
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (widget.launchPrompt) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Pressable(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          _upd.markPromptedThisLaunch();
+                          Navigator.of(context).pop();
+                        },
+                        child: Container(
+                          height: 44,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: gc.bgRaised2,
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              ExtraStrings.updateLater,
+                              maxLines: 1,
+                              style: AppTheme.f(
+                                13.5,
+                                weight: FontWeight.w600,
+                                color: gc.text,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Pressable(
+                        onTap: () async {
+                          HapticFeedback.selectionClick();
+                          final tag = rel.tagName;
+                          await _upd.skipCurrentUpdate();
+                          if (!context.mounted) return;
+                          showNotchToast(
+                            context,
+                            ExtraStrings.skippedVersionToast(tag),
+                            icon: PhosphorIconsFill.checkCircle,
+                            accent: gc.textSecondary,
+                          );
+                          Navigator.of(context).pop();
+                        },
+                        child: Container(
+                          height: 44,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: gc.bgRaised2,
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              ExtraStrings.skipThisVersion,
+                              maxLines: 1,
+                              style: AppTheme.f(
+                                13.5,
+                                weight: FontWeight.w600,
+                                color: gc.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
               ],

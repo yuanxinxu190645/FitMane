@@ -60,6 +60,7 @@ import '../widgets/health_cards.dart';
 import '../widgets/liquid_notch.dart';
 import '../widgets/start_countdown.dart';
 import '../widgets/ui_kit.dart';
+import '../widgets/update_sheet.dart';
 import 'desktop.dart';
 
 class AppShell extends StatefulWidget {
@@ -100,6 +101,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver, Single
   late final AnimationController _collapse;
   bool _collapsed = false;
   int _restTick = fit.restDoneTick;
+  bool _updatePromptOpen = false;
   final _snap = SnapshotController();
   final _appKey = GlobalKey();
   ui.Image? _blurred;
@@ -143,7 +145,41 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver, Single
       if (await HealthSteps.takeUsage()) _showStepsInfo();
       await fit.readDisplay();
       await _offerLiteMode();
-      unawaited(AppUpdater.instance.initAndMaybeCheck());
+      unawaited(_checkAndPromptUpdate(coldStart: true));
+    });
+  }
+
+  Future<void> _checkAndPromptUpdate({required bool coldStart}) async {
+    await AppUpdater.instance.initAndMaybeCheck(coldStart: coldStart);
+    _maybeShowUpdatePrompt();
+  }
+
+  void _maybeShowUpdatePrompt() {
+    if (!mounted || _updatePromptOpen) return;
+    final upd = AppUpdater.instance;
+    if (!upd.shouldAutoPrompt) return;
+    if (!fit.onboarded || fit.isSessionActive) return;
+    if (glassShown.value > 0) return;
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return;
+    _updatePromptOpen = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        _updatePromptOpen = false;
+        return;
+      }
+      final u = AppUpdater.instance;
+      if (!u.shouldAutoPrompt ||
+          !fit.onboarded ||
+          fit.isSessionActive ||
+          glassShown.value > 0) {
+        _updatePromptOpen = false;
+        return;
+      }
+      showUpdateSheet(context, autoCheckIfIdle: false, launchPrompt: true)
+          .whenComplete(() {
+        _updatePromptOpen = false;
+      });
     });
   }
 
@@ -261,6 +297,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver, Single
   void _fitChanged() {
     if (_snap.allowSnapshotting) _changedUnder = true;
     _syncSnap();
+    _maybeShowUpdatePrompt();
     if (_blurred != null) {
       _blurAgain?.cancel();
       _blurAgain = Timer(Duration(milliseconds: fineEffects ? 160 : 350), _queueBlur);
@@ -406,6 +443,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver, Single
       fit.refreshWidgets();
       fit.refreshSteps();
       fit.refreshHealth();
+      unawaited(_checkAndPromptUpdate(coldStart: false));
     }
   }
 

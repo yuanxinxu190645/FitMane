@@ -20,6 +20,7 @@ import '../widgets/body_map.dart';
 import '../widgets/bulk_exercise_sheet.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/exercise_media.dart';
+import '../widgets/exercise_packs_sheet.dart';
 import '../widgets/glass.dart';
 import '../widgets/liquid_notch.dart';
 import '../widgets/quick_log_sheet.dart';
@@ -369,6 +370,8 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
             fit.exFavouritesOnly, fit.toggleFavouritesFilter),
         const SizedBox(width: 8),
         pill(ExtraStrings.bulkImportChip, false, () => showBulkImportExercisesSheet(context)),
+        const SizedBox(width: 8),
+        pill(ExtraStrings.exercisePacksChip, false, () => showExercisePacksSheet(context)),
         if (anyOn) ...[
           const SizedBox(width: 8),
           Pill(

@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import '../widgets/glass.dart';
 import '../catalog/exercise_catalog.dart';
 import '../catalog/gym_pack.dart';
+import '../catalog/pro_packs.dart';
 import '../catalog/program_templates.dart';
 import '../l10n/l10n.dart';
 import '../models/exercise.dart';
@@ -289,6 +290,7 @@ class FitState extends FitCore
       ..addAll(((data['exSecondary'] as Map?) ?? const {})
           .map((k, v) => MapEntry(k as String, (v as List).whereType<String>().toList())));
     plateBar = (data['plateBar'] as num?)?.toDouble();
+    disabledPacks = (data['disabledPacks'] as List?)?.whereType<String>().toSet() ?? <String>{};
     _builtInExercises = null;
     bgDim = (data['bgDim'] as num?)?.toDouble() ?? 0.55;
     showBodyComp = data['showBodyComp'] as bool? ?? true;
@@ -579,6 +581,7 @@ class FitState extends FitCore
         'bg': bgPattern,
         'heatTone': heatTone,
         'bgDim': bgDim,
+        'disabledPacks': disabledPacks.toList(),
         'showBodyComp': showBodyComp,
         'showQuickLog': showQuickLog,
         'quickLogSets': quickLogDefaultSets,
@@ -806,6 +809,7 @@ class FitState extends FitCore
     plateBar = null;
     modeOverride.clear();
     secondaryOverride.clear();
+    disabledPacks.clear();
     _builtInExercises = null;
     demoSize = 'large';
     demoLoop = 'always';
