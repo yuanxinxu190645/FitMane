@@ -95,7 +95,8 @@ mixin LibraryState on FitCore {
     }
     for (final e in kAllExpansionExercises) {
       if (e.id == id) {
-        return secondaryOverride[e.id] case final s?
+        final s = secondaryOverride[e.id];
+        return s != null
             ? e.copyWith(secondary: _cleanSecondary(e.primary, s))
             : e;
       }
