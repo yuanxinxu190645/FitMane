@@ -13,7 +13,7 @@ mixin LibraryState on FitCore {
 
   List<Exercise> get allExercises => [
         ...(_builtInExercises ??= [
-          for (final e in kExercises)
+          for (final e in [...kExercises, ...kGymPackExercises])
             if (secondaryOverride[e.id] case final s?) e.copyWith(secondary: _cleanSecondary(e.primary, s)) else e,
         ]),
         ...customExercises,
@@ -29,7 +29,7 @@ mixin LibraryState on FitCore {
     if (i >= 0) {
       customExercises[i] = customExercises[i].copyWith(secondary: clean);
     } else {
-      final base = kExercises.firstWhere((e) => e.id == id);
+      final base = [...kExercises, ...kGymPackExercises].firstWhere((e) => e.id == id);
       if (_sameMuscles(clean, _cleanSecondary(base.primary, base.secondary))) {
         secondaryOverride.remove(id);
       } else {
@@ -254,6 +254,42 @@ mixin LibraryState on FitCore {
     return id;
   }
 
+  List<String> addCustomExercisesBulk(
+    List<({String name, String primary, List<String> secondary, String equipment, String mode, String art})> items,
+  ) {
+    if (items.isEmpty) return const [];
+    final seen = <String>{
+      for (final e in allExercises) ...[
+        e.name.trim().toLowerCase(),
+        t.catalogName(e.id, e.name).trim().toLowerCase(),
+      ],
+    };
+    final created = <String>[];
+    for (final item in items) {
+      final cleanName = item.name.trim();
+      final key = cleanName.toLowerCase();
+      if (cleanName.isEmpty || !seen.add(key)) continue;
+      final id = 'c${DateTime.now().microsecondsSinceEpoch}-${_customSeq++}';
+      customExercises.add(Exercise(
+        id: id,
+        name: cleanName,
+        primary: item.primary,
+        secondary: _cleanSecondary(item.primary, item.secondary),
+        equipment: item.equipment,
+        difficulty: 'Beginner',
+        art: item.art,
+        steps: const [],
+        mode: kExerciseModeIds.contains(item.mode) ? item.mode : '',
+      ));
+      created.add(id);
+    }
+    if (created.isNotEmpty) {
+      _persist();
+      notifyListeners();
+    }
+    return created;
+  }
+
   void updateCustomExercise(
     String id, {
     required String name,
@@ -308,6 +344,9 @@ mixin LibraryState on FitCore {
     final forced = modeOverride[id];
     if (forced != null) return forced == 'weight' ? '' : forced;
     for (final e in customExercises) {
+      if (e.id == id) return e.mode;
+    }
+    for (final e in kGymPackExercises) {
       if (e.id == id) return e.mode;
     }
     return kExerciseModes[id] ?? '';

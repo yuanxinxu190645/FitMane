@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 
 import '../widgets/glass.dart';
 import '../catalog/exercise_catalog.dart';
+import '../catalog/gym_pack.dart';
 import '../catalog/program_templates.dart';
 import '../l10n/l10n.dart';
 import '../models/exercise.dart';

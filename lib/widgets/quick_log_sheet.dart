@@ -6,13 +6,16 @@ import '../l10n/extra_strings.dart';
 import '../l10n/l10n.dart';
 import '../models/exercise.dart';
 import '../models/workout.dart';
+import '../screens/exercises_screen.dart' show showCreateExerciseSheet;
 import '../services/exercise_match.dart';
+import '../services/exercise_smart.dart';
 import '../state/fit_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'dialogs.dart';
 import 'exercise_media.dart';
 import 'glass.dart';
+import 'liquid_notch.dart';
 import 'set_kind.dart';
 import 'ui_kit.dart';
 
@@ -744,6 +747,10 @@ class _QuickAddExerciseSheetState extends State<_QuickAddExerciseSheet> {
     final rest = trimmed.isEmpty
         ? [for (final ex in activeAll) if (!shownIds.contains(ex.id)) ex]
         : [for (final ex in activeAll) if (filter(ex)) ex];
+    final hasExact = trimmed.isNotEmpty &&
+        rest.any((e) =>
+            exerciseName(e).trim().toLowerCase() == trimmed.toLowerCase() ||
+            e.name.trim().toLowerCase() == trimmed.toLowerCase());
 
     return Padding(
       padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
@@ -771,6 +778,17 @@ class _QuickAddExerciseSheetState extends State<_QuickAddExerciseSheet> {
             Expanded(
               child: ListView(
                 children: [
+                  if (trimmed.isNotEmpty && rest.isEmpty) ...[
+                    _quickCreateCard(gc, trimmed),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        t.noMatches,
+                        textAlign: TextAlign.center,
+                        style: AppTheme.f(13.5, weight: FontWeight.w500, color: gc.textSecondary),
+                      ),
+                    ),
+                  ],
                   if (rec.isNotEmpty) ...[
                     _sectionHeader(gc, ExtraStrings.quickLogRecommendedTitle(focus.title), accent: gc.sage),
                     for (final ex in rec) _exerciseRow(gc, ex),
@@ -784,20 +802,117 @@ class _QuickAddExerciseSheetState extends State<_QuickAddExerciseSheet> {
                   if (rest.isNotEmpty) ...[
                     if (trimmed.isEmpty) _sectionHeader(gc, ExtraStrings.quickLogAllExercises),
                     for (final ex in rest) _exerciseRow(gc, ex),
-                  ] else if (trimmed.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 32),
-                      child: Text(
-                        t.noMatches,
-                        textAlign: TextAlign.center,
-                        style: AppTheme.f(14, weight: FontWeight.w500, color: gc.textSecondary),
-                      ),
-                    ),
+                    if (trimmed.isNotEmpty && !hasExact) ...[
+                      const SizedBox(height: 4),
+                      _quickCreateCard(gc, trimmed),
+                    ],
+                  ],
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _quickCreateCard(GymColors gc, String rawName) {
+    final name = rawName.trim();
+    final meta = inferExerciseMeta(name);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: gc.accentSoft,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: gc.accent.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Pressable(
+            scale: 0.985,
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              final id = fit.addCustomExercise(
+                name: name,
+                primary: meta.primary,
+                secondary: meta.secondary,
+                equipment: meta.equipment,
+                mode: meta.mode,
+                art: meta.art,
+              );
+              final created = fit.exerciseById(id);
+              if (created != null) {
+                fit.quickLogAddExercise(created, day: widget.day);
+                showNotchToast(
+                  context,
+                  ExtraStrings.quickCreateCreatedToast(name),
+                  icon: PhosphorIconsFill.checkCircle,
+                  accent: gc.sage,
+                );
+              }
+              Navigator.of(context).pop(id);
+            },
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(color: gc.ember, shape: BoxShape.circle),
+                  child: Icon(PhosphorIconsBold.plus, size: 17, color: gc.onEmber),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ExtraStrings.quickCreateAction(name),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.f(14.5, weight: FontWeight.w700, color: gc.text),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        ExtraStrings.quickCreateAutoHint(
+                          muscleLabel(meta.primary),
+                          t.equipment(meta.equipment),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.f(12, weight: FontWeight.w600, color: gc.accent),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: Pill(
+              label: ExtraStrings.quickCreateCustomize,
+              bg: gc.bgRaised,
+              fg: gc.textSecondary,
+              onTap: () {
+                showCreateExerciseSheet(
+                  context,
+                  initialName: name,
+                  onCreated: (id) {
+                    final ex = fit.exerciseById(id);
+                    if (ex != null) fit.quickLogAddExercise(ex, day: widget.day);
+                    if (mounted) Navigator.of(context).pop(id);
+                  },
+                );
+              },
+              hPad: 12,
+              vPad: 6,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }

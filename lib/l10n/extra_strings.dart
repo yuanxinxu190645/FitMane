@@ -168,4 +168,45 @@ class ExtraStrings {
   static String get nutritionModuleHint => _zh
       ? '关闭后不展示饮食标签页、首页卡片、饮食工具与统计，也不启用相关提醒'
       : 'Hide nutrition tab, home card, diet tools & reports, and disable reminders';
+
+  // Smart quick-create & bulk exercise import
+  static String quickCreateAction(String name) =>
+      _zh ? '快捷新建「$name」并加入' : 'Quick-create "$name" & add';
+  static String quickCreateOnly(String name) =>
+      _zh ? '快捷新建「$name」' : 'Quick-create "$name"';
+  static String quickCreateAutoHint(String muscle, String equip) =>
+      _zh ? '已自动识别：$muscle · $equip（点右侧可微调）' : 'Auto-detected: $muscle · $equip';
+  static String quickCreateAutoTag(String muscle, String equip) =>
+      _zh ? '自动识别：$muscle · $equip' : 'Auto: $muscle · $equip';
+  static String get quickCreateCustomize => _zh ? '微调属性' : 'Customize';
+  static String quickCreateCreatedToast(String name) =>
+      _zh ? '已新建并加入：$name' : 'Created & added: $name';
+  static String quickCreateSavedToast(String name) =>
+      _zh ? '已新建动作：$name' : 'Created exercise: $name';
+  static String get bulkImportTitle => _zh ? '批量添加动作' : 'Bulk add exercises';
+  static String get bulkImportChip => _zh ? '批量添加' : 'Bulk add';
+  static String get bulkImportSubtitle =>
+      _zh ? '每行输入或粘贴一个动作名，自动识别部位与器械' : 'One exercise per line — muscles & equipment auto-detected';
+  static String get bulkImportHint => _zh
+      ? '每行一个动作，例如：\n悍马机上斜推胸\n蝴蝶机反向飞鸟\n单臂绳索侧平举\n下斜板卷腹'
+      : 'One per line, e.g.:\nHammer Incline Press\nReverse Pec Deck\nCable Lateral Raise';
+  static String get bulkImportFillSample => _zh ? '填入示例' : 'Fill sample';
+  static String get bulkImportSampleText => _zh
+      ? '悍马机窄距推胸\n单臂绳索高位下拉\n坐姿器械反向飞鸟\n斜板负重卷腹'
+      : 'Hammer Close-Grip Press\nSingle-Arm Cable Pulldown\nSeated Reverse Fly\nDecline Weighted Crunch';
+  static String bulkImportPreviewTitle(int n) =>
+      _zh ? '识别预览（$n 个可导入）' : 'Preview ($n ready to import)';
+  static String get bulkImportTapToAdjust =>
+      _zh ? '点击部位或器械标签可快速切换' : 'Tap muscle or gear chip to adjust';
+  static String get bulkImportDuplicateBadge => _zh ? '库中已有' : 'Exists';
+  static String get bulkImportAlsoLogToday =>
+      _zh ? '导入后同时加入今日训练' : 'Also add to today’s log';
+  static String bulkImportSubmit(int n) =>
+      _zh ? '一键导入 $n 个动作' : 'Import $n exercises';
+  static String get bulkImportEmptyAction =>
+      _zh ? '请先输入至少一个新动作名称' : 'Enter at least one new exercise';
+  static String bulkImportDoneToast(int n) =>
+      _zh ? '已成功导入 $n 个自定义动作' : 'Imported $n custom exercises';
+  static String bulkImportDoneAndLoggedToast(int n) =>
+      _zh ? '已导入 $n 个动作并加入今日训练' : 'Imported $n exercises & logged today';
 }

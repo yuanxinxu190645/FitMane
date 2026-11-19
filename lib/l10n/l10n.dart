@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
+import '../catalog/gym_pack.dart';
 import 'app_localizations.dart';
 import 'catalog_es.dart';
 import 'catalog_it.dart';
@@ -320,10 +321,15 @@ extension GymL10n on AppLocalizations {
 
   String shortMonthYear(DateTime d) => _dates(DateFormat.yMMM).format(d);
 
-  String catalogName(String id, String fallback) => _catalogNames[appLanguage]?[id] ?? fallback;
+  String catalogName(String id, String fallback) =>
+      _catalogNames[appLanguage]?[id] ??
+      (appLanguage.startsWith('zh') ? kGymPackNameZh[id] : null) ??
+      fallback;
 
   List<String> catalogSteps(String id, List<String> fallback) =>
-      _catalogSteps[appLanguage]?[id] ?? fallback;
+      _catalogSteps[appLanguage]?[id] ??
+      (appLanguage.startsWith('zh') ? kGymPackStepsZh[id] : null) ??
+      fallback;
 }
 
 String _capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);

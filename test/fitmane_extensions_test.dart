@@ -1,11 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymmane/catalog/exercise_catalog.dart';
+import 'package:gymmane/catalog/gym_pack.dart';
 import 'package:gymmane/l10n/l10n.dart';
+import 'package:gymmane/models/exercise.dart';
 import 'package:gymmane/models/measure.dart';
 import 'package:gymmane/models/workout.dart';
 import 'package:gymmane/services/app_updater.dart';
 import 'package:gymmane/services/body_comp_math.dart';
 import 'package:gymmane/services/exercise_match.dart';
+import 'package:gymmane/services/exercise_smart.dart';
 import 'package:gymmane/services/local_store.dart';
 import 'package:gymmane/state/fit_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -241,6 +244,105 @@ void main() {
 
       fit.setNutritionBeta(true);
       expect(fit.nutritionBeta, isTrue);
+    });
+
+    test('kGymPackExercises integrates into allExercises cleanly with full Chinese coverage', () {
+      expect(kGymPackExercises.length, greaterThanOrEqualTo(75));
+      final baseIds = {for (final e in kExercises) e.id};
+      final baseNames = {for (final e in kExercises) e.name.trim().toLowerCase()};
+      final validMuscles = {for (final m in kMuscles) m.id};
+
+      for (final ex in kGymPackExercises) {
+        expect(baseIds.contains(ex.id), isFalse, reason: 'duplicate id ${ex.id}');
+        expect(baseNames.contains(ex.name.trim().toLowerCase()), isFalse, reason: 'duplicate name ${ex.name}');
+        expect(validMuscles.contains(ex.primary), isTrue, reason: 'primary ${ex.primary}');
+        expect(kEquipment.contains(ex.equipment), isTrue, reason: 'equip ${ex.equipment}');
+        expect(kGymPackNameZh[ex.id], isNotNull, reason: 'missing zh name ${ex.id}');
+        expect(kGymPackStepsZh[ex.id]?.length, 3, reason: 'missing zh steps ${ex.id}');
+      }
+
+      expect(fit.allExercises.length, greaterThanOrEqualTo(kExercises.length + kGymPackExercises.length));
+      setAppLanguage('zh');
+      expect(t.catalogName('gp-hammer-incline-press', 'fallback'), '悍马机上斜推胸');
+      setAppLanguage('en');
+      expect(t.catalogName('gp-hammer-incline-press', 'Hammer Strength Incline Chest Press'),
+          'Hammer Strength Incline Chest Press');
+    });
+
+    test('upgraded Chinese fuzzy and pinyin search finds segmented and slang queries', () {
+      setAppLanguage('zh');
+      expect(fit.allExercises.where(exerciseSearch('坐姿划船')).length, greaterThanOrEqualTo(3));
+      expect(fit.allExercises.where(exerciseSearch('单臂划船')).length, greaterThanOrEqualTo(3));
+      expect(fit.allExercises.where(exerciseSearch('悍马推胸')).length, greaterThanOrEqualTo(3));
+      expect(fit.allExercises.where(exerciseSearch('倒蹬')).any((e) => e.id == 'gp-leg-press-45'), isTrue);
+      expect(fit.allExercises.where(exerciseSearch('wt')).length, greaterThanOrEqualTo(5));
+      expect(fit.allExercises.where(exerciseSearch('hmj')).length, greaterThanOrEqualTo(5));
+      setAppLanguage('en');
+      // Pinyin shortcut must stay inactive outside zh locale.
+      expect(fit.allExercises.where(exerciseSearch('wt')).any((e) => e.id == 'EIeI8Vf'), isFalse);
+    });
+
+    test('inferExerciseMeta and bulk import identify muscles/gear and persist', () {
+      final mChest = inferExerciseMeta('悍马机上斜推胸');
+      expect(mChest.primary, 'chest');
+      expect(mChest.equipment, 'Machine');
+      expect(mChest.mode, isEmpty);
+
+      final mRear = inferExerciseMeta('蝴蝶机反向飞鸟');
+      expect(mRear.primary, 'shoulders');
+      expect(mRear.equipment, 'Machine');
+
+      final mLat = inferExerciseMeta('单臂绳索侧平举');
+      expect(mLat.primary, 'shoulders');
+      expect(mLat.equipment, 'Cable');
+
+      final mLeg = inferExerciseMeta('45度倒蹬机');
+      expect(mLeg.primary, 'quads');
+      expect(mLeg.equipment, 'Machine');
+
+      final mCore = inferExerciseMeta('下斜板卷腹');
+      expect(mCore.primary, 'abdomen');
+
+      final mCardio = inferExerciseMeta('动感单车间歇');
+      expect(mCardio.mode, 'cardio');
+
+      final parsed = parseBulkExerciseLines('''
+        1. 定制龙门架单臂侧平举
+        - 定制上斜哑铃挤压推胸
+        • 定制龙门架单臂侧平举
+      ''');
+      expect(parsed, hasLength(2));
+
+      final created = fit.addCustomExercisesBulk([
+        for (final p in parsed)
+          (
+            name: p.name,
+            primary: p.meta.primary,
+            secondary: p.meta.secondary,
+            equipment: p.meta.equipment,
+            mode: p.meta.mode,
+            art: p.meta.art,
+          ),
+      ]);
+      expect(created, hasLength(2));
+
+      // Re-importing same names skips duplicates
+      final dup = fit.addCustomExercisesBulk([
+        for (final p in parsed)
+          (
+            name: p.name,
+            primary: p.meta.primary,
+            secondary: p.meta.secondary,
+            equipment: p.meta.equipment,
+            mode: p.meta.mode,
+            art: p.meta.art,
+          ),
+      ]);
+      expect(dup, isEmpty);
+
+      fit.persistNow();
+      fit.loadFromStore();
+      expect(fit.customExercises.map((e) => e.name), containsAll(['定制龙门架单臂侧平举', '定制上斜哑铃挤压推胸']));
     });
   });
 }

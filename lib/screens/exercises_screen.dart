@@ -11,11 +11,13 @@ import '../catalog/exercise_catalog.dart';
 import '../l10n/extra_strings.dart';
 import '../l10n/l10n.dart';
 import '../models/exercise.dart';
+import '../services/exercise_smart.dart';
 import '../services/media_store.dart';
 import '../state/fit_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../widgets/body_map.dart';
+import '../widgets/bulk_exercise_sheet.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/exercise_media.dart';
 import '../widgets/glass.dart';
@@ -81,7 +83,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
               padding: EdgeInsets.fromLTRB(20, contentTop, 20, 110),
               itemCount: list.isEmpty ? 1 : list.length,
               itemBuilder: (context, i) {
-                if (list.isEmpty) return _empty(gc);
+                if (list.isEmpty) return _empty(context, gc);
                 final ex = list[i];
                 final first = i == 0 || list[i - 1].primary != ex.primary;
                 final last = i == list.length - 1 || list[i + 1].primary != ex.primary;
@@ -365,6 +367,8 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
         const SizedBox(width: 8),
         pill(fit.favouriteCount > 0 ? '${t.favouritesOnly} · ${fit.favouriteCount}' : t.favouritesOnly,
             fit.exFavouritesOnly, fit.toggleFavouritesFilter),
+        const SizedBox(width: 8),
+        pill(ExtraStrings.bulkImportChip, false, () => showBulkImportExercisesSheet(context)),
         if (anyOn) ...[
           const SizedBox(width: 8),
           Pill(
@@ -381,10 +385,12 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
     );
   }
 
-  Widget _empty(GymColors gc) {
+  Widget _empty(BuildContext context, GymColors gc) {
     final noFavs = fit.exFavouritesOnly && fit.favouriteCount == 0;
+    final query = fit.exSearch.trim();
+    final meta = query.isNotEmpty ? inferExerciseMeta(query) : null;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 20),
       child: Column(
         children: [
           if (noFavs)
@@ -398,6 +404,120 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
           Text(noFavs ? t.noFavouritesHint : t.noExercisesHint,
               textAlign: TextAlign.center,
               style: AppTheme.f(13, weight: FontWeight.w500, color: gc.textSecondary)),
+          if (!noFavs && meta != null) ...[
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: gc.accentSoft,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: gc.accent.withValues(alpha: 0.35)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Pressable(
+                    scale: 0.98,
+                    onTap: () {
+                      HapticFeedback.mediumImpact();
+                      final id = fit.addCustomExercise(
+                        name: query,
+                        primary: meta.primary,
+                        secondary: meta.secondary,
+                        equipment: meta.equipment,
+                        mode: meta.mode,
+                        art: meta.art,
+                      );
+                      final created = fit.exerciseById(id);
+                      if (created != null) fit.quickLogAddExercise(created);
+                      showNotchToast(
+                        context,
+                        ExtraStrings.quickCreateCreatedToast(query),
+                        icon: PhosphorIconsFill.checkCircle,
+                        accent: gc.sage,
+                        action: ExtraStrings.quickLogOpenToday,
+                        onTap: () => showQuickLogSheet(context, expandExerciseId: id),
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(color: gc.ember, shape: BoxShape.circle),
+                          child: Icon(PhosphorIconsBold.plus, size: 16, color: gc.onEmber),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                ExtraStrings.quickCreateAction(query),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTheme.f(14.5, weight: FontWeight.w700, color: gc.text),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                ExtraStrings.quickCreateAutoTag(
+                                  muscleLabel(meta.primary),
+                                  t.equipment(meta.equipment),
+                                ),
+                                style: AppTheme.f(12, weight: FontWeight.w600, color: gc.accent),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Pill(
+                        label: ExtraStrings.quickCreateOnly(query),
+                        bg: gc.bgRaised,
+                        fg: gc.text,
+                        onTap: () {
+                          HapticFeedback.mediumImpact();
+                          final id = fit.addCustomExercise(
+                            name: query,
+                            primary: meta.primary,
+                            secondary: meta.secondary,
+                            equipment: meta.equipment,
+                            mode: meta.mode,
+                            art: meta.art,
+                          );
+                          showNotchToast(
+                            context,
+                            ExtraStrings.quickCreateSavedToast(query),
+                            icon: PhosphorIconsFill.checkCircle,
+                            accent: gc.sage,
+                          );
+                          fit.openExercise(id);
+                        },
+                        hPad: 12,
+                        vPad: 7,
+                        fontSize: 12,
+                      ),
+                      const SizedBox(width: 8),
+                      Pill(
+                        label: ExtraStrings.quickCreateCustomize,
+                        bg: gc.bgRaised,
+                        fg: gc.textSecondary,
+                        onTap: () => showCreateExerciseSheet(context, initialName: query),
+                        hPad: 12,
+                        vPad: 7,
+                        fontSize: 12,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -640,12 +760,18 @@ void showCreateExerciseSheet(BuildContext context,
   final scroll = ScrollController();
   bool nameMissing = false;
   int shakes = 0;
-  String muscle = src?.primary ?? kMuscles.first.id;
-  final secondary = <String>{...?src?.secondary};
-  String equipment = src?.equipment ?? kEquipment.first;
+  final initialTrim = initialName.trim();
+  final seededMeta = src == null && initialTrim.isNotEmpty ? inferExerciseMeta(initialTrim) : null;
+  String muscle = src?.primary ?? seededMeta?.primary ?? kMuscles.first.id;
+  final secondary = <String>{...?src?.secondary, ...?seededMeta?.secondary};
+  String equipment = src?.equipment ?? seededMeta?.equipment ?? kEquipment.first;
   String difficulty = src?.difficulty ?? kDifficulties.first;
-  String mode = editing?.mode ?? (copyOf != null ? fit.modeOf(copyOf.id) : '');
+  String mode = editing?.mode ?? (copyOf != null ? fit.modeOf(copyOf.id) : seededMeta?.mode ?? '');
   String kind = src?.kind ?? '';
+  bool touchedMuscle = src != null;
+  bool touchedEquip = src != null;
+  bool touchedMode = src != null;
+  String inferredArt = copyOf?.art ?? seededMeta?.art ?? '';
   bool advanced = false;
   bool allEquipment = false;
   String? openZone = kBodyZones.entries.firstWhere((z) => z.value.contains(muscle), orElse: () => kBodyZones.entries.first).key;
@@ -705,6 +831,23 @@ void showCreateExerciseSheet(BuildContext context,
                 children: [
                   SheetTitle(titleCase(editing == null ? t.newExercise : t.editExercise),
                       subtitle: editing == null ? t.newExerciseHint : null),
+                  if (editing == null && copyOf == null) ...[
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Pill(
+                        label: ExtraStrings.bulkImportTitle,
+                        bg: gc.bgRaised2,
+                        fg: gc.accent,
+                        onTap: () {
+                          Navigator.pop(sheetCtx);
+                          showBulkImportExercisesSheet(context);
+                        },
+                        hPad: 12,
+                        vPad: 6,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   _Shake(
                     count: shakes,
@@ -716,7 +859,27 @@ void showCreateExerciseSheet(BuildContext context,
                       cursorColor: nameMissing ? gc.danger : gc.accent,
                       textCapitalization: TextCapitalization.words,
                       onChanged: (v) {
-                        if (nameMissing && v.trim().isNotEmpty) setSheet(() => nameMissing = false);
+                        if (src == null && v.trim().length >= 2) {
+                          final meta = inferExerciseMeta(v);
+                          setSheet(() {
+                            if (nameMissing && v.trim().isNotEmpty) nameMissing = false;
+                            if (!touchedMuscle) {
+                              muscle = meta.primary;
+                              secondary
+                                ..clear()
+                                ..addAll(meta.secondary);
+                              openZone = kBodyZones.entries
+                                  .firstWhere((z) => z.value.contains(muscle),
+                                      orElse: () => kBodyZones.entries.first)
+                                  .key;
+                            }
+                            if (!touchedEquip) equipment = meta.equipment;
+                            if (!touchedMode) mode = meta.mode;
+                            inferredArt = meta.art;
+                          });
+                        } else if (nameMissing && v.trim().isNotEmpty) {
+                          setSheet(() => nameMissing = false);
+                        }
                       },
                       decoration: InputDecoration(
                         hintText: t.exerciseName,
@@ -760,7 +923,10 @@ void showCreateExerciseSheet(BuildContext context,
                           scale: 0.96,
                           onTap: () {
                             HapticFeedback.selectionClick();
-                            setSheet(() => mode = id);
+                            setSheet(() {
+                              mode = id;
+                              touchedMode = true;
+                            });
                           },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 220),
@@ -802,6 +968,7 @@ void showCreateExerciseSheet(BuildContext context,
                               muscle = zone.value.first;
                               secondary.remove(muscle);
                             }
+                            touchedMuscle = true;
                           });
                         },
                         hPad: 16,
@@ -829,6 +996,7 @@ void showCreateExerciseSheet(BuildContext context,
                                     setSheet(() {
                                       muscle = id;
                                       secondary.remove(id);
+                                      touchedMuscle = true;
                                     });
                                   },
                                   vPad: 7,
@@ -853,7 +1021,10 @@ void showCreateExerciseSheet(BuildContext context,
                           fg: equipment == e ? gc.onEmber : gc.textSecondary,
                           onTap: () {
                             HapticFeedback.selectionClick();
-                            setSheet(() => equipment = e);
+                            setSheet(() {
+                              equipment = e;
+                              touchedEquip = true;
+                            });
                           },
                           hPad: 14,
                           vPad: 8,
@@ -870,6 +1041,7 @@ void showCreateExerciseSheet(BuildContext context,
                           setSheet(() {
                             equipment = added;
                             allEquipment = true;
+                            touchedEquip = true;
                           });
                         },
                         hPad: 12,
@@ -1135,7 +1307,7 @@ void showCreateExerciseSheet(BuildContext context,
                           secondary: secondary.toList(),
                           aliases: aliases,
                           kind: kind,
-                          art: copyOf?.art ?? '');
+                          art: copyOf?.art ?? inferredArt);
                       if (mediaPath != null) {
                         await fit.attachExerciseMedia(id, mediaPath!);
                       }

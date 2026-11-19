@@ -8,8 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String kDefaultUpdateRepo = 'yuanxinxu190645/FitMane';
-const String kCurrentAppVersion = '2.4.2';
-const int kCurrentAppBuild = 17;
+const String kCurrentAppVersion = '2.4.3';
+const int kCurrentAppBuild = 18;
 
 class ReleaseAsset {
   const ReleaseAsset({
