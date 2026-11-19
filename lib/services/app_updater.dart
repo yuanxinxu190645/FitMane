@@ -197,6 +197,7 @@ class AppUpdater extends ChangeNotifier {
   static String normalizeRepo(String raw) {
     var v = raw.trim();
     v = v.replaceFirst(RegExp(r'^https?://github\.com/'), '');
+    v = v.replaceAll(RegExp(r'^/+|/+$'), '');
     v = v.replaceAll(RegExp(r'\.git$'), '');
     v = v.replaceAll(RegExp(r'^/+|/+$'), '');
     return v.isEmpty ? kDefaultUpdateRepo : v;
