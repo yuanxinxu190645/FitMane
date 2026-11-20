@@ -233,4 +233,7 @@ class ExtraStrings {
           : '$enabledCount packs active · $totalExercises pack exercises';
   static String exercisePackCount(int n) =>
       _zh ? '$n 个动作' : '$n exercises';
+
+  static String get referenceArtLabel => _zh ? '参考示意图' : 'Reference';
+  static String get referenceArtShort => _zh ? '示意' : 'Ref';
 }

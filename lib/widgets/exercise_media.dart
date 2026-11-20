@@ -5,16 +5,23 @@ import 'package:flutter/cupertino.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:video_player/video_player.dart';
 
+import '../l10n/extra_strings.dart';
 import '../models/exercise.dart';
 import '../services/media_store.dart';
 import '../state/fit_state.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
 import 'exercise_art.dart';
 import 'file_thumb.dart';
 import 'shimmer.dart';
 import 'local_image.dart';
 
 const _shortDemo = Duration(seconds: 10);
+
+/// Returns true for built-in expansion pack exercises (`gp-*` / `pp-*`) that
+/// reuse reference illustrations from the base art library.
+bool isExpansionArtExercise(String id) =>
+    id.startsWith('gp-') || id.startsWith('pp-');
 
 class ExerciseMedia extends StatelessWidget {
   const ExerciseMedia({
@@ -39,7 +46,7 @@ class ExerciseMedia extends StatelessWidget {
     final media = fit.mediaFor(ex.id);
     final path = media.isEmpty ? null : MediaStore.pathFor(media);
     if (path == null) {
-      return ExerciseArt(
+      final art = ExerciseArt(
           slug: ex.art,
           icon: sportIcon(ex.id),
           height: height,
@@ -47,6 +54,19 @@ class ExerciseMedia extends StatelessWidget {
           live: live,
           bordered: bordered,
           loops: loops);
+      if (!isExpansionArtExercise(ex.id) || height < 40) {
+        return art;
+      }
+      final compact = height < 120;
+      final inset = compact ? 3.0 : 10.0;
+      return Stack(children: [
+        art,
+        Positioned(
+          top: inset,
+          left: inset,
+          child: IgnorePointer(child: _RefArtBadge(compact: compact)),
+        ),
+      ]);
     }
     final isVideo = MediaStore.isVideo(media);
     if (isVideo && live) {
@@ -121,6 +141,43 @@ class _PlayBadge extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(color: gc.bg.withValues(alpha: 0.72), shape: BoxShape.circle),
       child: Icon(PhosphorIconsFill.play, size: size * 0.5, color: gc.text),
+    );
+  }
+}
+
+class _RefArtBadge extends StatelessWidget {
+  const _RefArtBadge({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final gc = context.gc;
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 4 : 8,
+        vertical: compact ? 1.5 : 3.5,
+      ),
+      decoration: BoxDecoration(
+        color: gc.bg.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(compact ? 6 : 10),
+        border: Border.all(
+          color: gc.border.withValues(alpha: 0.75),
+          width: 0.8,
+        ),
+      ),
+      child: Text(
+        compact
+            ? ExtraStrings.referenceArtShort
+            : ExtraStrings.referenceArtLabel,
+        maxLines: 1,
+        style: AppTheme.f(
+          compact ? 8.5 : 11,
+          weight: FontWeight.w600,
+          color: gc.textSecondary,
+          height: 1.15,
+        ),
+      ),
     );
   }
 }

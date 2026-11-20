@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymmane/catalog/exercise_catalog.dart';
 import 'package:gymmane/catalog/gym_pack.dart';
 import 'package:gymmane/catalog/pro_packs.dart';
+import 'package:gymmane/l10n/extra_strings.dart';
 import 'package:gymmane/l10n/l10n.dart';
 import 'package:gymmane/models/exercise.dart';
 import 'package:gymmane/models/measure.dart';
@@ -13,6 +15,8 @@ import 'package:gymmane/services/exercise_match.dart';
 import 'package:gymmane/services/exercise_smart.dart';
 import 'package:gymmane/services/local_store.dart';
 import 'package:gymmane/state/fit_state.dart';
+import 'package:gymmane/theme/app_theme.dart';
+import 'package:gymmane/widgets/exercise_media.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -447,6 +451,39 @@ void main() {
       expect(upd.hasUpdateBanner, isTrue);
       upd.autoCheck = false;
       expect(upd.shouldAutoPrompt, isFalse);
+    });
+
+    testWidgets('ExerciseMedia shows reference art badge only for expansion packs', (tester) async {
+      setAppLanguage('zh');
+      addTearDown(() => setAppLanguage('en'));
+
+      final baseEx = kExercises.firstWhere((e) => e.id == 'EIeI8Vf');
+      final gymEx = kGymPackExercises.first;
+      final proEx = kWeakPointsPackExercises.first;
+
+      expect(isExpansionArtExercise(baseEx.id), isFalse);
+      expect(isExpansionArtExercise(gymEx.id), isTrue);
+      expect(isExpansionArtExercise(proEx.id), isTrue);
+      expect(isExpansionArtExercise('c999'), isFalse);
+
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.dark,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                ExerciseMedia(ex: baseEx, height: 220),
+                ExerciseMedia(ex: proEx, height: 220),
+                ExerciseMedia(ex: gymEx, height: 52),
+                ExerciseMedia(ex: proEx, height: 32),
+              ],
+            ),
+          ),
+        ),
+      ));
+
+      expect(find.text(ExtraStrings.referenceArtLabel), findsOneWidget);
+      expect(find.text(ExtraStrings.referenceArtShort), findsOneWidget);
     });
   });
 }
