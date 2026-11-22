@@ -97,6 +97,23 @@ class _QuickLogSheet extends StatefulWidget {
 class _QuickLogSheetState extends State<_QuickLogSheet> {
   late DateTime _day = _dayOnly(widget.initialDay ?? DateTime.now());
   String? _expandedId;
+  final Map<String, double> _announcedPrScore = {};
+
+  void _checkPrToast(BuildContext context, GymColors gc, LoggedExercise e, int i) {
+    if (!fit.isQuickLogSetPr(e, i, _day)) return;
+    final st = e.sets[i];
+    final score = fit.isRepsOnly(e.id) ? st.reps.toDouble() : fit.liftScore(e.id, st);
+    final announced = _announcedPrScore[e.id] ?? 0;
+    if (score <= announced + 0.001) return;
+    _announcedPrScore[e.id] = score;
+    HapticFeedback.mediumImpact();
+    showNotchToast(
+      context,
+      ExtraStrings.quickLogNewPrToast(t.catalogName(e.id, e.name)),
+      icon: PhosphorIconsFill.trophy,
+      accent: gc.accent,
+    );
+  }
 
   @override
   void initState() {
@@ -244,7 +261,14 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
   }
 
   Widget _emptyDayCard(GymColors gc) {
-    final focus = fit.suggestedFocus;
+    final rec = fit.smartQuickRecommendation;
+    final reason = rec.hasReason
+        ? ExtraStrings.smartRecReason(
+            muscleLabel(rec.highlightMuscle),
+            rec.weeklySets,
+            recovered: rec.recovery >= 0.75,
+          )
+        : '';
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -283,9 +307,21 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
                 Icon(PhosphorIconsBold.sparkle, size: 14, color: gc.sage),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    ExtraStrings.quickLogRecommendedTitle(focus.title),
-                    style: AppTheme.f(12.5, weight: FontWeight.w700, color: gc.sage),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ExtraStrings.quickLogRecommendedTitle(rec.title),
+                        style: AppTheme.f(12.5, weight: FontWeight.w700, color: gc.sage),
+                      ),
+                      if (reason.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          reason,
+                          style: AppTheme.f(11.5, weight: FontWeight.w500, color: gc.textSecondary),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -528,11 +564,18 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
     );
 
     final shownWeight = (fit.toDisplayWeight(set.weight) * 100).round() / 100;
+    final isPr = fit.isQuickLogSetPr(e, i, _day);
     final weightCell = cell(
       t.weightCol(fit.units.toUpperCase()),
       fmt(shownWeight),
-      () => fit.bumpLoggedWeight(e, i, -1),
-      () => fit.bumpLoggedWeight(e, i, 1),
+      () {
+        fit.bumpLoggedWeight(e, i, -1);
+        _checkPrToast(context, gc, e, i);
+      },
+      () {
+        fit.bumpLoggedWeight(e, i, 1);
+        _checkPrToast(context, gc, e, i);
+      },
       minWidth: 32,
       edit: (ctx) async {
         final v = await askNumber(
@@ -541,7 +584,10 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
           initial: fmt(shownWeight),
           decimal: true,
         );
-        if (v != null) fit.setLoggedWeightShown(e, i, v);
+        if (v != null) {
+          fit.setLoggedWeightShown(e, i, v);
+          if (context.mounted) _checkPrToast(context, gc, e, i);
+        }
       },
     );
 
@@ -550,6 +596,9 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
       decoration: BoxDecoration(
         color: gc.bgRaised,
         borderRadius: BorderRadius.circular(14),
+        border: isPr
+            ? Border.all(color: gc.accent.withValues(alpha: 0.45), width: 1)
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -578,6 +627,27 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
                   ),
                 ),
               ),
+              if (isPr) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: gc.accentSoft,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(PhosphorIconsFill.star, size: 10, color: gc.accent),
+                      const SizedBox(width: 2),
+                      Text(
+                        ExtraStrings.prBadge,
+                        style: AppTheme.d(9.5, weight: FontWeight.w800, color: gc.accent),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(width: 6),
               if (distance) ...[
                 cell(
@@ -628,11 +698,20 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
                   cell(
                     t.repsCol,
                     '${set.reps}',
-                    () => fit.bumpLoggedReps(e, i, -1),
-                    () => fit.bumpLoggedReps(e, i, 1),
+                    () {
+                      fit.bumpLoggedReps(e, i, -1);
+                      _checkPrToast(context, gc, e, i);
+                    },
+                    () {
+                      fit.bumpLoggedReps(e, i, 1);
+                      _checkPrToast(context, gc, e, i);
+                    },
                     edit: (ctx) async {
                       final v = await askNumber(ctx, title: t.repsCol, initial: '${set.reps}', decimal: false);
-                      if (v != null) fit.setLoggedReps(e, i, v.round());
+                      if (v != null) {
+                        fit.setLoggedReps(e, i, v.round());
+                        if (context.mounted) _checkPrToast(context, gc, e, i);
+                      }
                     },
                   ),
               ],
@@ -737,7 +816,10 @@ class _QuickAddExerciseSheetState extends State<_QuickAddExerciseSheet> {
         if (!fit.isArchived(ex.id)) ex,
     ];
     final trimmed = _query.trim();
-    final focus = fit.suggestedFocus;
+    final smartRec = fit.smartQuickRecommendation;
+    final smartRecHeader = smartRec.hasReason
+        ? '${ExtraStrings.quickLogRecommendedTitle(smartRec.title)} · ${ExtraStrings.smartRecReason(muscleLabel(smartRec.highlightMuscle), smartRec.weeklySets, recovered: smartRec.recovery >= 0.75)}'
+        : ExtraStrings.quickLogRecommendedTitle(smartRec.title);
     final rec = trimmed.isEmpty
         ? [for (final ex in fit.recommendedExercises(6)) if (!fit.isArchived(ex.id)) ex]
         : const <Exercise>[];
@@ -790,7 +872,7 @@ class _QuickAddExerciseSheetState extends State<_QuickAddExerciseSheet> {
                     ),
                   ],
                   if (rec.isNotEmpty) ...[
-                    _sectionHeader(gc, ExtraStrings.quickLogRecommendedTitle(focus.title), accent: gc.sage),
+                    _sectionHeader(gc, smartRecHeader, accent: gc.sage),
                     for (final ex in rec) _exerciseRow(gc, ex),
                     const SizedBox(height: 10),
                   ],

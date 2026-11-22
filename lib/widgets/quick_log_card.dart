@@ -46,7 +46,14 @@ class QuickLogCard extends StatelessWidget {
     ];
     final totalSets = items.fold<int>(0, (acc, e) => acc + e.sets.length);
     final shown = items.take(4).toList();
-    final focus = fit.suggestedFocus;
+    final rec = fit.smartQuickRecommendation;
+    final recReason = rec.hasReason
+        ? ExtraStrings.smartRecReason(
+            muscleLabel(rec.highlightMuscle),
+            rec.weeklySets,
+            recovered: rec.recovery >= 0.75,
+          )
+        : '';
 
     return Pressable(
       scale: 0.985,
@@ -142,11 +149,25 @@ class QuickLogCard extends StatelessWidget {
                     Icon(PhosphorIconsBold.sparkle, size: 13, color: gc.sage),
                     const SizedBox(width: 7),
                     Expanded(
-                      child: Text(
-                        ExtraStrings.quickLogRecommendedTitle(focus.title),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTheme.f(12, weight: FontWeight.w600, color: gc.textSecondary),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ExtraStrings.quickLogRecommendedTitle(rec.title),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTheme.f(12, weight: FontWeight.w700, color: gc.text),
+                          ),
+                          if (recReason.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              recReason,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTheme.f(11, weight: FontWeight.w500, color: gc.sage),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],

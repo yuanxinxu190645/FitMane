@@ -14,7 +14,7 @@ import '../widgets/entrance.dart';
 import '../widgets/ui_kit.dart';
 import '../widgets/update_sheet.dart';
 
-const kAppVersion = '2.4.5';
+const kAppVersion = '2.4.6';
 const _kAuthor = 'InlitX';
 const _kAuthorUrl = 'https://github.com/InlitX';
 const _kRepoUrl = 'https://github.com/InlitX/GymMane';

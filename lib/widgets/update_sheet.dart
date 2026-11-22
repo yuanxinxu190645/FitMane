@@ -304,16 +304,34 @@ class _UpdateSheetState extends State<_UpdateSheet> with WidgetsBindingObserver 
               color: gc.sageSoft,
               borderColor: Colors.transparent,
               padding: const EdgeInsets.all(16),
-              child: Row(children: [
-                Icon(PhosphorIconsFill.checkCircle, size: 18, color: gc.sage),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    ExtraStrings.installerLaunched,
-                    style: AppTheme.f(13.5, weight: FontWeight.w600, color: gc.text),
-                  ),
-                ),
-              ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Icon(PhosphorIconsFill.checkCircle, size: 18, color: gc.sage),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        ExtraStrings.installerLaunched,
+                        style: AppTheme.f(13.5, weight: FontWeight.w600, color: gc.text),
+                      ),
+                    ),
+                  ]),
+                  if (_upd.sha256Verified || _upd.preUpdateBackedUp) ...[
+                    const SizedBox(height: 8),
+                    if (_upd.sha256Verified)
+                      Text(
+                        '• ${ExtraStrings.sha256VerifiedHint}',
+                        style: AppTheme.f(12, weight: FontWeight.w500, color: gc.textSecondary),
+                      ),
+                    if (_upd.preUpdateBackedUp)
+                      Text(
+                        '• ${ExtraStrings.preUpdateBackupHint}',
+                        style: AppTheme.f(12, weight: FontWeight.w500, color: gc.textSecondary),
+                      ),
+                  ],
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             PrimaryButton(

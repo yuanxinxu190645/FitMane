@@ -295,6 +295,8 @@ class FitState extends FitCore
     showBodyComp = data['showBodyComp'] as bool? ?? true;
     showQuickLog = data['showQuickLog'] as bool? ?? true;
     quickLogDefaultSets = ((data['quickLogSets'] as num?)?.toInt() ?? 5).clamp(1, 12);
+    showMuscleVol = data['showMuscleVol'] as bool? ?? true;
+    weeklyMuscleTarget = ((data['weeklyMuscleTarget'] as num?)?.toInt() ?? 10).clamp(4, 20);
     showFocus = data['showFocus'] as bool? ?? true;
     showRecommended = data['showRecs'] as bool? ?? true;
     showWeekStats = data['showWeek'] as bool? ?? true;
@@ -584,6 +586,8 @@ class FitState extends FitCore
         'showBodyComp': showBodyComp,
         'showQuickLog': showQuickLog,
         'quickLogSets': quickLogDefaultSets,
+        'showMuscleVol': showMuscleVol,
+        'weeklyMuscleTarget': weeklyMuscleTarget,
         'showFocus': showFocus,
         'showRecs': showRecommended,
         'showWeek': showWeekStats,
@@ -823,6 +827,8 @@ class FitState extends FitCore
     showBodyComp = true;
     showQuickLog = true;
     quickLogDefaultSets = 5;
+    showMuscleVol = true;
+    weeklyMuscleTarget = 10;
     showFocus = true;
     showRecommended = true;
     textSize = 'normal';

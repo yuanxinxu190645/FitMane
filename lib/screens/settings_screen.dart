@@ -471,6 +471,30 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     hint: ExtraStrings.quickLogDefaultSetsHint,
                   ),
+                  _prefRow(
+                    gc,
+                    PhosphorIconsRegular.chartBar,
+                    ExtraStrings.weeklyMuscleTargetLabel,
+                    StepperControl(
+                      value: ExtraStrings.quickLogSetsUnit(fit.weeklyMuscleTarget),
+                      minWidth: 48,
+                      btnSize: 28,
+                      gap: 10,
+                      fontSize: 14,
+                      onDec: () => fit.setWeeklyMuscleTarget(fit.weeklyMuscleTarget - 1),
+                      onInc: () => fit.setWeeklyMuscleTarget(fit.weeklyMuscleTarget + 1),
+                      onEdit: () async {
+                        final v = await askNumber(
+                          context,
+                          title: ExtraStrings.weeklyMuscleTargetLabel,
+                          initial: '${fit.weeklyMuscleTarget}',
+                          decimal: false,
+                        );
+                        if (v != null) fit.setWeeklyMuscleTarget(v.round());
+                      },
+                    ),
+                    hint: ExtraStrings.weeklyMuscleTargetHint,
+                  ),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => showExercisePacksSheet(context),
@@ -1023,6 +1047,7 @@ class SettingsScreen extends StatelessWidget {
         (t.changeRest, PhosphorIconsRegular.timer),
         (t.sideRest, PhosphorIconsRegular.arrowsLeftRight),
         (ExtraStrings.quickLogDefaultSetsLabel, PhosphorIconsRegular.listNumbers),
+        (ExtraStrings.weeklyMuscleTargetLabel, PhosphorIconsRegular.chartBar),
         (ExtraStrings.exercisePacksTitle, PhosphorIconsRegular.stack),
         (t.effortSetting, PhosphorIconsRegular.gauge),
         (t.weightStepSetting, PhosphorIconsRegular.barbell),

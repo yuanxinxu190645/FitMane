@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymmane/catalog/exercise_catalog.dart';
@@ -14,9 +16,11 @@ import 'package:gymmane/services/chinese_aliases.dart';
 import 'package:gymmane/services/exercise_match.dart';
 import 'package:gymmane/services/exercise_smart.dart';
 import 'package:gymmane/services/local_store.dart';
+import 'package:gymmane/services/sha256.dart';
 import 'package:gymmane/state/fit_state.dart';
 import 'package:gymmane/theme/app_theme.dart';
 import 'package:gymmane/widgets/exercise_media.dart';
+import 'package:gymmane/widgets/weekly_muscle_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -484,6 +488,118 @@ void main() {
 
       expect(find.text(ExtraStrings.referenceArtLabel), findsOneWidget);
       expect(find.text(ExtraStrings.referenceArtShort), findsOneWidget);
+    });
+
+    test('sha256Hex and SHA256SUMS parser match standard vectors', () {
+      expect(
+        sha256Hex(const []),
+        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      );
+      expect(
+        sha256Hex(utf8.encode('abc')),
+        'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+      );
+      final sink = Sha256Sink()
+        ..add(utf8.encode('abcdbcdecdefdefgefghfghighij'))
+        ..add(utf8.encode('hijkijkljklmklmnlmnomnopnopq'));
+      expect(
+        sink.digestHex(),
+        '248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1',
+      );
+
+      const sums = '''
+ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad  FitMane-arm64-v8a.apk
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *FitMane-x86_64.apk
+''';
+      expect(
+        AppUpdater.parseSha256ForFile(sums, 'FitMane-arm64-v8a.apk'),
+        'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+      );
+      expect(
+        AppUpdater.parseSha256ForFile(sums, 'FitMane-x86_64.apk'),
+        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      );
+      expect(AppUpdater.parseSha256ForFile(sums, 'missing.apk'), isNull);
+    });
+
+    test('quickLogAddExercise applies autoProgress weight & reps rules and detects PR sets', () {
+      final bench = kExercises.firstWhere((e) => e.id == 'EIeI8Vf');
+      final day1 = DateTime(2026, 11, 10, 12);
+      final day2 = DateTime(2026, 11, 12, 12);
+      final day3 = DateTime(2026, 11, 14, 12);
+
+      fit.sessions.add(LoggedSession(day1, 1800, [
+        LoggedExercise(bench.id, bench.name, bench.primary, [
+          LoggedSet(8, 80),
+          LoggedSet(8, 80),
+        ]),
+      ]));
+
+      // Weight auto-progress: +2.5 kg step
+      fit.setAutoProgress('weight');
+      final resW = fit.quickLogAddExercise(bench, day: day2, setsCount: 3);
+      expect(resW.exercise.sets.first.weight, 82.5);
+      expect(resW.exercise.sets.first.reps, 8);
+      expect(fit.isQuickLogSetPr(resW.exercise, 0, day2), isTrue);
+
+      // Warmup set never counts as PR
+      fit.setLoggedKind(resW.exercise, 0, SetKind.warmup);
+      expect(fit.isQuickLogSetPr(resW.exercise, 0, day2), isFalse);
+
+      // Reps auto-progress: +1 rep until 12, then weight up & reset to 8
+      fit.setAutoProgress('reps');
+      final resR = fit.quickLogAddExercise(bench, day: day3, setsCount: 2);
+      expect(resR.exercise.sets.first.weight, 82.5);
+      expect(resR.exercise.sets.first.reps, 9);
+    });
+
+    test('smartQuickRecommendation favors under-trained recovered split and weeklyMuscleTarget persists', () {
+      expect(fit.showMuscleVol, isTrue);
+      expect(fit.weeklyMuscleTarget, 10);
+      expect(fit.weeklyMuscleTargetMax, 20);
+      fit.setWeeklyMuscleTarget(12);
+      fit.toggleMuscleVol();
+      fit.persistNow();
+      fit.loadFromStore();
+      expect(fit.weeklyMuscleTarget, 12);
+      expect(fit.showMuscleVol, isFalse);
+
+      fit.resetAllData();
+      final bench = kExercises.firstWhere((e) => e.id == 'EIeI8Vf');
+      final squat = kExercises.firstWhere((e) => e.primary == 'quads' && fit.modeOf(e.id).isEmpty);
+      final now = DateTime.now();
+      fit.sessions.add(LoggedSession(now.subtract(const Duration(hours: 6)), 1800, [
+        LoggedExercise(bench.id, bench.name, bench.primary, List.generate(12, (_) => LoggedSet(8, 80))),
+        LoggedExercise(squat.id, squat.name, squat.primary, List.generate(12, (_) => LoggedSet(8, 100))),
+      ]));
+
+      final rec = fit.smartQuickRecommendation;
+      expect(rec.hasReason, isTrue);
+      expect(rec.highlightMuscle, 'back');
+      expect(rec.weeklySets, 0);
+      expect(rec.recovery, greaterThanOrEqualTo(0.9));
+    });
+
+    testWidgets('WeeklyMuscleCard displays target range and expands extra muscles', (tester) async {
+      setAppLanguage('zh');
+      addTearDown(() => setAppLanguage('en'));
+
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.dark,
+        home: const Scaffold(
+          body: SingleChildScrollView(
+            child: WeeklyMuscleCard(),
+          ),
+        ),
+      ));
+
+      expect(find.text(ExtraStrings.weeklyMuscleTitle.toUpperCase()), findsOneWidget);
+      expect(find.text(ExtraStrings.weeklyMuscleRange(10, 20)), findsOneWidget);
+      expect(find.text(ExtraStrings.weeklyMuscleShowMore), findsOneWidget);
+
+      await tester.tap(find.text(ExtraStrings.weeklyMuscleShowMore));
+      await tester.pumpAndSettle();
+      expect(find.text(ExtraStrings.weeklyMuscleShowLess), findsOneWidget);
     });
   });
 }

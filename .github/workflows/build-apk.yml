@@ -111,18 +111,44 @@ jobs:
       - name: Build split APKs
         run: flutter build apk --release --split-per-abi --split-debug-info=build/symbols
 
-      - name: Rename APKs
+      - name: Rename APKs & generate SHA-256 checksums
         run: |
           cd build/app/outputs/flutter-apk
           mv app-arm64-v8a-release.apk     FitMane-arm64-v8a.apk
           mv app-armeabi-v7a-release.apk   FitMane-armeabi-v7a.apk
           mv app-x86_64-release.apk        FitMane-x86_64.apk
+          sha256sum FitMane-arm64-v8a.apk FitMane-armeabi-v7a.apk FitMane-x86_64.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Extract Chinese release notes
+        id: notes
+        env:
+          REL_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          tag = os.environ['REL_TAG'].strip()
+          body = ''
+          if os.path.isfile('RELEASE_NOTES.md'):
+              text = open('RELEASE_NOTES.md', encoding='utf-8').read()
+              m = re.search(rf'^##\s+{re.escape(tag)}\s*\n(.*?)(?=^##\s+|\Z)', text, re.M | re.S)
+              if m:
+                  body = m.group(1).strip()
+          os.makedirs('build', exist_ok=True)
+          out = 'build/release_notes.md'
+          with open(out, 'w', encoding='utf-8') as f:
+              f.write(body)
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as gh:
+              gh.write(f"has_notes={'true' if body else 'false'}\n")
+          PY
 
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
           name: fitmane-apks
-          path: build/app/outputs/flutter-apk/FitMane-*.apk
+          path: |
+            build/app/outputs/flutter-apk/FitMane-*.apk
+            build/app/outputs/flutter-apk/SHA256SUMS.txt
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -130,8 +156,10 @@ jobs:
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           name: FitMane ${{ inputs.tag || github.ref_name }}
-          generate_release_notes: true
+          body_path: ${{ steps.notes.outputs.has_notes == 'true' && 'build/release_notes.md' || '' }}
+          generate_release_notes: ${{ steps.notes.outputs.has_notes != 'true' }}
           files: |
             build/app/outputs/flutter-apk/FitMane-arm64-v8a.apk
             build/app/outputs/flutter-apk/FitMane-armeabi-v7a.apk
             build/app/outputs/flutter-apk/FitMane-x86_64.apk
+            build/app/outputs/flutter-apk/SHA256SUMS.txt

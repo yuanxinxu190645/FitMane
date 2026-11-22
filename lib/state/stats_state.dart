@@ -546,13 +546,48 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
         ? const <LoggedSet>[]
         : (prev.workingSets.isNotEmpty ? prev.workingSets : prev.sets);
 
+    final useAutoProg = !cardio && !timed && seedSets.isNotEmpty && hasProgress(ex.id);
+    final progRule = useAutoProg ? progressRule(ex.id) : null;
+    final progStepKg = useAutoProg ? (progressFor(ex.id) ?? fromDisplayWeight(weightStep)) : 0.0;
+    final assisted = isAssisted(ex.id);
+    final repsOnly = isRepsOnly(ex.id);
+
+    double nextProgWeight(double w) {
+      if (assisted) return _round3(math.max(0.0, w - progStepKg));
+      return _round3(w + progStepKg);
+    }
+
+    final doubleHitHigh = useAutoProg &&
+        progRule!.kind == ProgressKind.double &&
+        seedSets.every((st) => st.reps >= progRule.high);
+    final linearHitTarget = useAutoProg &&
+        progRule!.kind != ProgressKind.double &&
+        seedSets.first.reps > 0 &&
+        seedSets.every((st) => st.reps >= seedSets.first.reps);
+
     final initialSets = <LoggedSet>[];
     for (var k = 0; k < count; k++) {
       if (seedSets.isNotEmpty) {
         final src = seedSets[k < seedSets.length ? k : seedSets.length - 1];
+        var nextReps = src.reps;
+        var nextWeight = src.weight;
+        if (useAutoProg) {
+          if (repsOnly) {
+            if (src.reps > 0) nextReps = src.reps + 1;
+          } else if (progRule!.kind == ProgressKind.double) {
+            if (doubleHitHigh) {
+              nextWeight = nextProgWeight(src.weight);
+              nextReps = progRule.low;
+            } else if (src.reps > 0) {
+              nextReps = src.reps + 1;
+            }
+          } else if (linearHitTarget) {
+            nextWeight = nextProgWeight(src.weight);
+          }
+        }
         initialSets.add(LoggedSet(
-          src.reps,
-          src.weight,
+          nextReps,
+          nextWeight,
           sec: src.sec,
           km: src.km,
           left: src.left,
@@ -941,6 +976,39 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
       }
     }
     return best;
+  }
+
+  /// Highest working-set lift score strictly before [day], or 0 if no prior history.
+  double bestLiftScoreBefore(String id, DateTime day) {
+    if (modeOf(id).isNotEmpty) return 0;
+    final target = _dayKey(day);
+    final assisted = isAssisted(id);
+    final repsOnly = isRepsOnly(id);
+    var best = 0.0;
+    for (final h in exerciseHistory(id)) {
+      if (!_dayKey(h.date).isBefore(target)) continue;
+      for (final st in h.ex.workingSets) {
+        if (st.reps <= 0 || (!assisted && !repsOnly && st.weight <= 0)) continue;
+        final sc = repsOnly ? st.reps.toDouble() : liftScore(id, st);
+        if (sc > best) best = sc;
+      }
+    }
+    return best;
+  }
+
+  /// True when set [setIndex] in quick-logged [e] beats all prior working sets before [day].
+  bool isQuickLogSetPr(LoggedExercise e, int setIndex, DateTime day) {
+    if (modeOf(e.id).isNotEmpty) return false;
+    if (setIndex < 0 || setIndex >= e.sets.length) return false;
+    final st = e.sets[setIndex];
+    if (!st.counts || st.reps <= 0) return false;
+    final assisted = isAssisted(e.id);
+    final repsOnly = isRepsOnly(e.id);
+    if (!assisted && !repsOnly && st.weight <= 0) return false;
+    final prevBest = bestLiftScoreBefore(e.id, day);
+    if (prevBest <= 0) return false;
+    final score = repsOnly ? st.reps.toDouble() : liftScore(e.id, st);
+    return score > prevBest + 0.001;
   }
 
   ({double score, DateTime date})? bestWorkout(String id, PrKind kind) {
@@ -1938,5 +2006,88 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
 
     final next = idx >= 0 ? order[(idx + 1) % order.length] : order[today % 3];
     return table[next]!;
+  }
+
+  /// Volume- and recovery-aware training recommendation for quick log & home.
+  ({
+    String title,
+    String subtitle,
+    List<String> muscles,
+    String highlightMuscle,
+    int weeklySets,
+    double recovery,
+    bool hasReason,
+  }) get smartQuickRecommendation {
+    final base = suggestedFocus;
+    if (sessions.isEmpty) {
+      return (
+        title: base.title,
+        subtitle: base.subtitle,
+        muscles: base.muscles,
+        highlightMuscle: base.muscles.first,
+        weeklySets: 0,
+        recovery: 1.0,
+        hasReason: false,
+      );
+    }
+
+    final splits = [
+      (key: 'push', title: t.pushDay, subtitle: t.pushFocus, muscles: ['chest', 'shoulders', 'triceps']),
+      (key: 'pull', title: t.pullDay, subtitle: t.pullFocus, muscles: ['back', 'biceps', 'trapezius']),
+      (key: 'legs', title: t.legDay, subtitle: t.legFocus, muscles: ['quads', 'hamstrings', 'glutes']),
+    ];
+
+    final sets7 = muscleSetsOver(7);
+    final rec = muscleRecovery();
+    final target = weeklyMuscleTarget.toDouble();
+
+    final latest = sessions.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+    final recentLast = daysBetween(latest.date, DateTime.now()) <= 1;
+    var recentFamily = '';
+    if (recentLast) {
+      final fam = <String, double>{};
+      for (final e in latest.exercises) {
+        final f = muscleFamily(e.primary);
+        fam[f] = (fam[f] ?? 0) + e.volume;
+      }
+      if (fam.isNotEmpty) {
+        recentFamily = fam.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+      }
+    }
+
+    var bestSplit = splits.first;
+    var bestScore = -1e9;
+    var bestMuscle = bestSplit.muscles.first;
+    var bestSets = 0;
+    var bestRec = 1.0;
+
+    for (final sp in splits) {
+      final primary = sp.muscles.first;
+      final avgRec = sp.muscles.fold<double>(0, (sum, m) => sum + (rec[m] ?? 1.0)) / sp.muscles.length;
+      final primarySets = sets7[primary] ?? 0.0;
+      final avgSets = sp.muscles.fold<double>(0, (sum, m) => sum + (sets7[m] ?? 0.0)) / sp.muscles.length;
+      final deficit = math.max(0.0, target - primarySets) + math.max(0.0, target - avgSets) * 0.5;
+      final fatiguePenalty = avgRec < 0.65 ? -8.0 : 0.0;
+      final repeatPenalty = (recentLast && sp.key == recentFamily) ? -4.0 : 0.0;
+      final score = deficit + avgRec * 6.0 + fatiguePenalty + repeatPenalty;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestSplit = sp;
+        bestMuscle = primary;
+        bestSets = primarySets.round();
+        bestRec = rec[primary] ?? 1.0;
+      }
+    }
+
+    return (
+      title: bestSplit.title,
+      subtitle: bestSplit.subtitle,
+      muscles: bestSplit.muscles,
+      highlightMuscle: bestMuscle,
+      weeklySets: bestSets,
+      recovery: bestRec,
+      hasReason: true,
+    );
   }
 }

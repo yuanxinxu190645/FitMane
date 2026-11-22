@@ -30,6 +30,7 @@ import '../widgets/steps_card.dart';
 import '../widgets/svg_icon.dart';
 import '../widgets/ui_kit.dart';
 import '../widgets/update_sheet.dart';
+import '../widgets/weekly_muscle_card.dart';
 import 'progress_screen.dart';
 import 'routines_screen.dart';
 import 'start_sheet.dart';
@@ -76,6 +77,7 @@ class HomeScreen extends StatelessWidget {
     const slots = {
       'bodycomp': 0,
       'quicklog': 0,
+      'musclevol': 0,
       'focus': 0,
       'weekdays': 1,
       'routines': 1,
@@ -168,10 +170,10 @@ class HomeScreen extends StatelessWidget {
     for (final id in fit.homeOrderShown) {
       final b = blocks[id];
       if (b == null || b.isEmpty) continue;
-      final card = id == 'bodycomp' || id == 'quicklog' || id == 'weekdays' || id == 'focus' || id == 'steps';
+      final card = id == 'bodycomp' || id == 'quicklog' || id == 'musclevol' || id == 'weekdays' || id == 'focus' || id == 'steps';
       final gap = last == null
           ? (fit.photoDue ? (card ? 14.0 : 30.0) : (card ? 0.0 : 16.0))
-          : (card && (last == 'bodycomp' || last == 'quicklog' || last == 'weekdays' || last == 'focus' || last == 'steps'))
+          : (card && (last == 'bodycomp' || last == 'quicklog' || last == 'musclevol' || last == 'weekdays' || last == 'focus' || last == 'steps'))
               ? 14.0
               : id == 'nutrition' && last == 'folders'
                   ? 12.0
@@ -191,6 +193,9 @@ class HomeScreen extends StatelessWidget {
       ],
       'quicklog': [
             if (fit.showQuickLog) _away(const QuickLogCard()),
+      ],
+      'musclevol': [
+            if (fit.showMuscleVol) _away(const WeeklyMuscleCard()),
       ],
       'weekdays': [_away(_weekCard(context, gc))],
       'focus': [

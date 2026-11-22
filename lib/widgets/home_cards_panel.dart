@@ -21,6 +21,7 @@ class HomeCardsPanel extends StatelessWidget {
     final rows = <(String, bool, VoidCallback)>[
       (ExtraStrings.bodyCompTitle, fit.showBodyComp, fit.toggleBodyComp),
       (ExtraStrings.quickWorkoutTitle, fit.showQuickLog, fit.toggleQuickLog),
+      (ExtraStrings.weeklyMuscleTitle, fit.showMuscleVol, fit.toggleMuscleVol),
       (t.homeCardFocus, fit.showFocus, fit.toggleFocusCard),
       if (fit.stepsAvailable) (t.homeCardSteps, fit.stepsOn, onSteps),
       (t.homeCardWeek, fit.showWeekStats, fit.toggleWeekStats),
@@ -108,6 +109,7 @@ class HomeCardsPanel extends StatelessWidget {
 String _blockLabel(String id) => switch (id) {
       'bodycomp' => ExtraStrings.bodyCompTitle,
       'quicklog' => ExtraStrings.quickWorkoutTitle,
+      'musclevol' => ExtraStrings.weeklyMuscleTitle,
       'weekdays' => t.homeOrderWeekdays,
       'focus' => t.homeCardFocus,
       'steps' => t.homeCardSteps,
@@ -333,6 +335,23 @@ class _HomeSketch extends StatelessWidget {
                 _bar(14, 7, gc.accent.withValues(alpha: 0.85)),
               ]),
               _bar(double.infinity, 7, soft),
+            ])),
+      ),
+      'musclevol': (
+        fit.showMuscleVol,
+        _box(34,
+            pad: const EdgeInsets.fromLTRB(9, 7, 9, 7),
+            child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(child: _bar(double.infinity, 5, gc.sage.withValues(alpha: 0.8))),
+                const SizedBox(width: 6),
+                Expanded(child: _bar(double.infinity, 5, gc.accent.withValues(alpha: 0.7))),
+              ]),
+              Row(children: [
+                Expanded(child: _bar(double.infinity, 5, gc.accent.withValues(alpha: 0.6))),
+                const SizedBox(width: 6),
+                Expanded(child: _bar(double.infinity, 5, gc.sage.withValues(alpha: 0.75))),
+              ]),
             ])),
       ),
       'folders': (

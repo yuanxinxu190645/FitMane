@@ -7,9 +7,15 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/extra_strings.dart';
+import '../state/fit_state.dart';
+import 'auto_backup.dart';
+import 'backup_zip.dart';
+import 'sha256.dart';
+
 const String kDefaultUpdateRepo = 'yuanxinxu190645/FitMane';
-const String kCurrentAppVersion = '2.4.5';
-const int kCurrentAppBuild = 20;
+const String kCurrentAppVersion = '2.4.6';
+const int kCurrentAppBuild = 21;
 
 class ReleaseAsset {
   const ReleaseAsset({
@@ -109,6 +115,8 @@ class AppUpdater extends ChangeNotifier {
   String? errorMessage;
   DateTime? lastCheckedAt;
   String dismissedTag = '';
+  bool sha256Verified = false;
+  bool preUpdateBackedUp = false;
 
   bool get supported => !kIsWeb && Platform.isAndroid;
 
@@ -230,6 +238,30 @@ class AppUpdater extends ChangeNotifier {
     v = v.replaceAll(RegExp(r'\.git$'), '');
     v = v.replaceAll(RegExp(r'^/+|/+$'), '');
     return v.isEmpty ? kDefaultUpdateRepo : v;
+  }
+
+  static ReleaseAsset? findSha256Asset(List<ReleaseAsset> assets) {
+    for (final a in assets) {
+      final lower = a.name.toLowerCase();
+      if (lower == 'sha256sums.txt' || lower.endsWith('.sha256')) {
+        return a;
+      }
+    }
+    return null;
+  }
+
+  static String? parseSha256ForFile(String sumsText, String fileName) {
+    final target = fileName.trim().toLowerCase();
+    for (final rawLine in sumsText.split('\n')) {
+      final line = rawLine.trim();
+      if (line.isEmpty) continue;
+      final m = RegExp(r'^([0-9a-fA-F]{64})\s+\*?(.+)$').firstMatch(line);
+      if (m == null) continue;
+      final hash = m.group(1)!.toLowerCase();
+      final name = m.group(2)!.trim().split('/').last.toLowerCase();
+      if (name == target) return hash;
+    }
+    return null;
   }
 
   Future<void> init() async {
@@ -423,6 +455,11 @@ class AppUpdater extends ChangeNotifier {
     receivedBytes = 0;
     totalBytes = asset.size;
     errorMessage = null;
+    sha256Verified = false;
+    preUpdateBackedUp = false;
+    notifyListeners();
+
+    preUpdateBackedUp = await _backupBeforeUpdate();
     notifyListeners();
 
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
@@ -462,9 +499,11 @@ class AppUpdater extends ChangeNotifier {
       }
 
       sink = partFile.openWrite();
+      final hasher = Sha256Sink();
       var lastNotify = DateTime.now();
       await for (final chunk in resp) {
         sink.add(chunk);
+        hasher.add(chunk);
         receivedBytes += chunk.length;
         final now = DateTime.now();
         if (now.difference(lastNotify).inMilliseconds >= 80) {
@@ -479,6 +518,22 @@ class AppUpdater extends ChangeNotifier {
       await sink.close();
       sink = null;
 
+      final sumsAsset = findSha256Asset(rel.assets);
+      if (sumsAsset != null) {
+        final actualHash = hasher.digestHex();
+        final sumsText = await _fetchTextAsset(sumsAsset.downloadUrl);
+        final expectedHash = parseSha256ForFile(sumsText, asset.name);
+        if (expectedHash != null) {
+          if (expectedHash != actualHash) {
+            try {
+              await partFile.delete();
+            } catch (_) {}
+            throw Exception(ExtraStrings.sha256MismatchError);
+          }
+          sha256Verified = true;
+        }
+      }
+
       if (await finalFile.exists()) await finalFile.delete();
       await partFile.rename(finalFile.path);
       downloadedApkPath = finalFile.path;
@@ -492,6 +547,72 @@ class AppUpdater extends ChangeNotifier {
       notifyListeners();
     } finally {
       client.close(force: true);
+    }
+  }
+
+  Future<bool> _backupBeforeUpdate() async {
+    var ok = false;
+    try {
+      fit.persistNow();
+      if (AutoBackup.instance.hasFolder) {
+        if (await AutoBackup.instance.run(force: true)) {
+          ok = true;
+        }
+      }
+      final zip = await buildBackupZip();
+      if (isValidBackupZip(zip)) {
+        final docs = await getApplicationDocumentsDirectory();
+        final dir = Directory('${docs.path}/pre_update_backups');
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
+        final stamp = DateTime.now().millisecondsSinceEpoch;
+        final file = File('${dir.path}/pre-update-v$currentVersion-$stamp.zip');
+        await file.writeAsBytes(zip, flush: true);
+        ok = true;
+        final existing = await dir
+            .list()
+            .where((e) => e is File && e.path.endsWith('.zip'))
+            .cast<File>()
+            .toList();
+        existing.sort((a, b) => b.path.compareTo(a.path));
+        for (final stale in existing.skip(2)) {
+          try {
+            await stale.delete();
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return ok;
+  }
+
+  Future<String> _fetchTextAsset(String rawUrl) async {
+    Future<String> get(String url) async {
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 12);
+      try {
+        final req = await client.getUrl(Uri.parse(url));
+        req.headers.set(HttpHeaders.userAgentHeader, 'FitMane/$currentVersion');
+        if (token.isNotEmpty && proxy.trim().isEmpty) {
+          req.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+        }
+        final resp = await req.close().timeout(const Duration(seconds: 15));
+        if (resp.statusCode != HttpStatus.ok) {
+          throw HttpException('HTTP ${resp.statusCode}', uri: Uri.parse(url));
+        }
+        return await resp.transform(utf8.decoder).join();
+      } finally {
+        client.close(force: true);
+      }
+    }
+
+    final primary = applyProxy(rawUrl, proxy);
+    try {
+      return await get(primary);
+    } catch (_) {
+      if (primary != rawUrl) {
+        return await get(rawUrl);
+      }
+      rethrow;
     }
   }
 

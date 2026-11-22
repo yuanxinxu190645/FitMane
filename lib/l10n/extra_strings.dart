@@ -236,4 +236,46 @@ class ExtraStrings {
 
   static String get referenceArtLabel => _zh ? '参考示意图' : 'Reference';
   static String get referenceArtShort => _zh ? '示意' : 'Ref';
+
+  // Quick log PR & smart recommendations (v2.4.6)
+  static String get prBadge => 'PR';
+  static String quickLogNewPrToast(String name) =>
+      _zh ? '新纪录！$name 刷新个人最佳' : 'New PR! $name personal best';
+  static String smartRecReason(
+    String muscle,
+    int weeklySets, {
+    required bool recovered,
+  }) {
+    if (_zh) {
+      final status = recovered ? '已恢复' : '可安排';
+      return '$muscle本周 $weeklySets 组 · $status';
+    }
+    final status = recovered ? 'Recovered' : 'Ready';
+    return '$muscle $weeklySets sets this wk · $status';
+  }
+  static String get autoProgressAppliedHint =>
+      _zh ? '已按自动加重规则预填目标' : 'Pre-filled with auto-progression';
+
+  // Weekly muscle volume card (v2.4.6)
+  static String get weeklyMuscleTitle => _zh ? '本周肌群进度' : 'Weekly Muscle Volume';
+  static String weeklyMuscleRange(int minSets, int maxSets) =>
+      _zh ? '目标 $minSets–$maxSets 组' : 'Target $minSets–$maxSets sets';
+  static String get weeklyMuscleTargetLabel =>
+      _zh ? '每周肌群目标下限' : 'Weekly muscle set target';
+  static String get weeklyMuscleTargetHint => _zh
+      ? '首页「本周肌群进度」与智能推荐使用的每周目标组数下限（默认 10 组，达标区间 10–20 组）。'
+      : 'Lower bound of weekly sets per muscle for progress bars & recommendations (default 10, range 10–20).';
+  static String get weeklyMuscleShowMore => _zh ? '展开全部' : 'Show all';
+  static String get weeklyMuscleShowLess => _zh ? '收起' : 'Less';
+
+  // Safer updates: SHA-256 + pre-update backup (v2.4.6)
+  static String get sha256Verifying =>
+      _zh ? '正在校验安装包完整性 (SHA-256)…' : 'Verifying APK checksum (SHA-256)…';
+  static String get sha256MismatchError => _zh
+      ? '安装包 SHA-256 校验未通过，文件可能损坏或被篡改，已自动删除，请重新下载。'
+      : 'APK SHA-256 checksum mismatch. File was deleted for safety; please retry.';
+  static String get preUpdateBackupHint =>
+      _zh ? '更新前已自动备份训练数据' : 'Training data backed up before update';
+  static String get sha256VerifiedHint =>
+      _zh ? '已通过 SHA-256 完整性校验' : 'SHA-256 integrity verified';
 }

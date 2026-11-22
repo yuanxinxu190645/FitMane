@@ -2,7 +2,7 @@ part of 'fit_state.dart';
 
 const String kBgPhotoId = 'bg';
 
-const List<String> kHomeBlocks = ['bodycomp', 'quicklog', 'weekdays', 'focus', 'steps', 'week', 'routines', 'activity', 'recommended', 'folders', 'nutrition'];
+const List<String> kHomeBlocks = ['bodycomp', 'quicklog', 'musclevol', 'weekdays', 'focus', 'steps', 'week', 'routines', 'activity', 'recommended', 'folders', 'nutrition'];
 
 mixin SettingsState on FitCore, ToolsState, LibraryState {
   String themePref = 'system';
@@ -38,6 +38,9 @@ mixin SettingsState on FitCore, ToolsState, LibraryState {
   bool showBodyComp = true;
   bool showQuickLog = true;
   int quickLogDefaultSets = 5;
+  bool showMuscleVol = true;
+  int weeklyMuscleTarget = 10;
+  int get weeklyMuscleTargetMax => (weeklyMuscleTarget * 2).clamp(weeklyMuscleTarget + 4, 30);
   bool showFocus = true;
   bool showRecommended = true;
   bool showWeekStats = true;
@@ -647,6 +650,20 @@ mixin SettingsState on FitCore, ToolsState, LibraryState {
     final next = count.clamp(1, 12);
     if (next == quickLogDefaultSets) return;
     quickLogDefaultSets = next;
+    _persist();
+    notifyListeners();
+  }
+
+  void toggleMuscleVol() {
+    showMuscleVol = !showMuscleVol;
+    _persist();
+    notifyListeners();
+  }
+
+  void setWeeklyMuscleTarget(int count) {
+    final next = count.clamp(4, 20);
+    if (next == weeklyMuscleTarget) return;
+    weeklyMuscleTarget = next;
     _persist();
     notifyListeners();
   }
