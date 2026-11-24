@@ -25,7 +25,7 @@ class _AiExportSheet extends StatelessWidget {
 
   String _formatTime(DateTime? dt) {
     if (dt == null) return ExtraStrings.aiCloudNeverSynced;
-    final p2 = (int n) => n.toString().padLeft(2, '0');
+    String p2(int n) => n.toString().padLeft(2, '0');
     return ExtraStrings.aiCloudLastSynced(
       '${dt.month}/${dt.day} ${p2(dt.hour)}:${p2(dt.minute)}',
     );

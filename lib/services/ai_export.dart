@@ -35,8 +35,8 @@ String buildAiTrainingReport({DateTime? now}) {
   // 1. Body composition
   sb.writeln('## 1. 身体成分与趋势');
   final summary = BodyCompMath.summarize(
-    weights: fit.bodyweights,
-    bodyFats: fit.measuresOf('bodyfat'),
+    fit.bodyweight,
+    fit.measures,
     heightCm: fit.profile.heightCm,
   );
   final base = fit.effectiveLeanMassBaseline;
@@ -70,13 +70,14 @@ String buildAiTrainingReport({DateTime? now}) {
   sb.writeln('| 肌群 | 近7天等效组 | 近7天原始组 | 近30天等效组 | 当前恢复度 |');
   sb.writeln('|---|---:|---:|---:|---:|');
   for (final m in kMuscles) {
-    final e7 = eff7[m] ?? 0;
-    final r7 = raw7[m] ?? 0;
-    final e30 = eff30[m] ?? 0;
-    final rv = ((rec[m] ?? 1.0) * 100).round();
+    final id = m.id;
+    final e7 = eff7[id] ?? 0;
+    final r7 = raw7[id] ?? 0;
+    final e30 = eff30[id] ?? 0;
+    final rv = ((rec[id] ?? 1.0) * 100).round();
     if (e7 == 0 && r7 == 0 && e30 == 0 && rv == 100) continue;
     sb.writeln(
-      '| ${muscleLabel(m)} ($m) | ${e7.toStringAsFixed(1)} | ${r7.toStringAsFixed(1)} | ${e30.toStringAsFixed(1)} | $rv% |',
+      '| ${muscleLabel(id)} ($id) | ${e7.toStringAsFixed(1)} | ${r7.toStringAsFixed(1)} | ${e30.toStringAsFixed(1)} | $rv% |',
     );
   }
   sb.writeln();
@@ -91,9 +92,7 @@ String buildAiTrainingReport({DateTime? now}) {
     sb.writeln('|---|---|---|');
     for (final r in prs) {
       final name = t.catalogName(r.id, r.name);
-      final best = r.kind == PrKind.weight
-          ? '${fit.weightLabel(r.best)} × ${r.reps}'
-          : '${r.best.toStringAsFixed(0)}';
+      final best = fit.recordLabel(r);
       final orm = r.kind == PrKind.weight && r.oneRm > 0
           ? fit.weightLabel(r.oneRm)
           : '-';
@@ -132,6 +131,7 @@ String buildAiTrainingReport({DateTime? now}) {
             SetKind.warmup => '(热身)',
             SetKind.drop => '(递减)',
             SetKind.failure => '(力竭)',
+            SetKind.restPause => '(休息暂停)',
             SetKind.normal => '',
           };
           final rpeMark = st.rpe != null ? ' @RPE${st.rpe!.toStringAsFixed(1)}' : '';
@@ -221,7 +221,7 @@ class AiExportService extends ChangeNotifier {
     final digest = Object.hash(
       fit.sessions.length,
       fit.sessions.isEmpty ? 0 : fit.sessions.last.exercises.length,
-      fit.bodyweights.length,
+      fit.bodyweight.length,
       fit.useEffectiveVolume,
     );
     if (digest == _lastDigest) return;
@@ -270,7 +270,7 @@ class AiExportService extends ChangeNotifier {
         _lastDigest = Object.hash(
           fit.sessions.length,
           fit.sessions.isEmpty ? 0 : fit.sessions.last.exercises.length,
-          fit.bodyweights.length,
+          fit.bodyweight.length,
           fit.useEffectiveVolume,
         );
       } else {
