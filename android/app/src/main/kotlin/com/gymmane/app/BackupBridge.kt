@@ -11,12 +11,32 @@ import java.io.File
 object BackupBridge {
     const val CHANNEL = "gymmane/backup"
     private const val REQUEST_CODE = 4272
+    private const val REQUEST_CODE_FILE = 4273
     private var pending: MethodChannel.Result? = null
+    private var pendingFile: MethodChannel.Result? = null
 
     fun attach(activity: Activity, channel: MethodChannel) {
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "pick" -> pick(activity, result)
+                "pickFile" -> {
+                    val name = call.argument<String>("name") ?: "FitMane-AI-Summary.md"
+                    val mime = call.argument<String>("mime") ?: "text/markdown"
+                    pickFile(activity, name, mime, result)
+                }
+                "writeFile" -> {
+                    val uri = call.argument<String>("uri")
+                    val content = call.argument<String>("content")
+                    if (uri == null || content == null) {
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
+                    val context = activity.applicationContext
+                    Thread {
+                        val ok = writeFile(context, Uri.parse(uri), content)
+                        activity.runOnUiThread { result.success(ok) }
+                    }.start()
+                }
                 "check" -> result.success(hasAccess(activity, call.argument<String>("uri")))
                 "write" -> {
                     val uri = call.argument<String>("uri")
@@ -82,7 +102,55 @@ object BackupBridge {
         }
     }
 
+    private fun pickFile(activity: Activity, name: String, mime: String, result: MethodChannel.Result) {
+        pendingFile?.success(null)
+        pendingFile = result
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = mime
+            putExtra(Intent.EXTRA_TITLE, name)
+            addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION,
+            )
+        }
+        try {
+            activity.startActivityForResult(intent, REQUEST_CODE_FILE)
+        } catch (e: Exception) {
+            pendingFile = null
+            result.success(null)
+        }
+    }
+
     fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+        if (requestCode == REQUEST_CODE_FILE) {
+            val result = pendingFile ?: return true
+            pendingFile = null
+            val uri = data?.data
+            if (resultCode != Activity.RESULT_OK || uri == null) {
+                result.success(null)
+                return true
+            }
+            var persisted = false
+            try {
+                activity.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+                persisted = true
+            } catch (e: Exception) {
+                persisted = false
+            }
+            result.success(
+                mapOf(
+                    "uri" to uri.toString(),
+                    "name" to docDisplayName(activity, uri),
+                    "persisted" to persisted,
+                ),
+            )
+            return true
+        }
         if (requestCode != REQUEST_CODE) return false
         val result = pending ?: return true
         pending = null
@@ -102,6 +170,43 @@ object BackupBridge {
         }
         result.success(mapOf("uri" to uri.toString(), "name" to folderName(activity, uri)))
         return true
+    }
+
+    private fun docDisplayName(context: Context, uri: Uri): String {
+        try {
+            context.contentResolver.query(
+                uri,
+                arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+                null,
+                null,
+                null,
+            )?.use {
+                if (it.moveToFirst()) {
+                    val v = it.getString(0)
+                    if (!v.isNullOrBlank()) return v
+                }
+            }
+        } catch (e: Exception) {
+        }
+        return uri.lastPathSegment?.substringAfterLast('/') ?: "FitMane-AI-Summary.md"
+    }
+
+    private fun writeFile(context: Context, uri: Uri, content: String): Boolean {
+        val bytes = content.toByteArray(Charsets.UTF_8)
+        val resolver = context.contentResolver
+        return try {
+            val out = try {
+                resolver.openOutputStream(uri, "wt")
+            } catch (e: Exception) {
+                resolver.openOutputStream(uri, "w")
+            }
+            out?.use {
+                it.write(bytes)
+                it.flush()
+            } != null
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun hasAccess(context: Context, uri: String?): Boolean {

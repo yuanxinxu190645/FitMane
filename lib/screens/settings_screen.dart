@@ -36,6 +36,7 @@ import '../services/nfc_tags.dart';
 import '../services/quick_tiles.dart';
 import '../services/watch_link.dart';
 import 'help_topics.dart';
+import '../widgets/ai_export_sheet.dart';
 import '../widgets/app_icon_sheet.dart';
 import '../widgets/nfc_sheet.dart';
 import '../widgets/quick_tiles_sheet.dart';
@@ -960,6 +961,7 @@ class SettingsScreen extends StatelessWidget {
           _linkGroup(gc, [
               (PhosphorIconsRegular.fileCsv, t.exportCsv, () => _exportCsv(context)),
               (PhosphorIconsRegular.fileText, t.reportTitle, () => showReportSheet(context)),
+              (PhosphorIconsRegular.sparkle, ExtraStrings.aiCloudExportTitle, () => showAiExportSheet(context)),
               (PhosphorIconsRegular.fileZip, t.exportBackup, () => _exportBackup(context)),
               (PhosphorIconsRegular.downloadSimple, t.importBackup, () => _importBackup(context)),
               if (AutoBackup.instance.supported)
@@ -968,7 +970,7 @@ class SettingsScreen extends StatelessWidget {
               (PhosphorIconsRegular.export, t.stravaRow, () => showStravaSheet(context)),
               (PhosphorIconsRegular.barbell, t.clearWorkouts, () => _clearWorkouts(context)),
               (PhosphorIconsRegular.trash, t.resetData, () => _resetAll(context)),
-          ], danger: (AutoBackup.instance.supported ? 6 : 5) + (WatchLink.instance.available ? 1 : 0)),
+          ], danger: (AutoBackup.instance.supported ? 7 : 6) + (WatchLink.instance.available ? 1 : 0)),
         ];
       default:
         return [
@@ -1112,6 +1114,7 @@ class SettingsScreen extends StatelessWidget {
       _Category('data', PhosphorIconsRegular.database, _sectionTitle('data'), [
         (t.exportCsv, PhosphorIconsRegular.fileCsv),
         (t.reportTitle, PhosphorIconsRegular.fileText),
+        (ExtraStrings.aiCloudExportTitle, PhosphorIconsRegular.sparkle),
         (t.exportBackup, PhosphorIconsRegular.fileZip),
         (t.importBackup, PhosphorIconsRegular.downloadSimple),
         (t.autoBackup, PhosphorIconsRegular.clockCounterClockwise),

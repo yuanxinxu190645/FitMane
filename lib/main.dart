@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'app/gymmane_app.dart';
 import 'services/alarm_store.dart';
+import 'services/ai_export.dart';
 import 'services/auto_backup.dart';
 import 'services/device_kind.dart';
 import 'services/home_widget_bridge.dart';
@@ -65,6 +66,7 @@ Future<void> main() async {
   fit.onWidgetsShouldUpdate = HomeWidgetBridge.update;
   NutritionWidgets.watch(HomeWidgetBridge.update);
   AutoBackup.instance.init();
+  AiExportService.instance.init();
   unawaited(WatchPhone.init());
   unawaited(QuickTiles.init());
   runApp(const GymManeApp());

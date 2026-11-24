@@ -14,8 +14,8 @@ import 'backup_zip.dart';
 import 'sha256.dart';
 
 const String kDefaultUpdateRepo = 'yuanxinxu190645/FitMane';
-const String kCurrentAppVersion = '2.4.8';
-const int kCurrentAppBuild = 23;
+const String kCurrentAppVersion = '2.4.9';
+const int kCurrentAppBuild = 24;
 
 class ReleaseAsset {
   const ReleaseAsset({

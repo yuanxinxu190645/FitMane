@@ -10,6 +10,7 @@ import 'package:gymmane/l10n/l10n.dart';
 import 'package:gymmane/models/exercise.dart';
 import 'package:gymmane/models/measure.dart';
 import 'package:gymmane/models/workout.dart';
+import 'package:gymmane/services/ai_export.dart';
 import 'package:gymmane/services/app_updater.dart';
 import 'package:gymmane/services/body_comp_math.dart';
 import 'package:gymmane/services/chinese_aliases.dart';
@@ -714,6 +715,29 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *FitMane-x86_64
       expect(fit.useEffectiveVolume, isFalse);
       fit.setUseEffectiveVolume(true);
       expect(fit.activeMuscleSetsOver(7)['quads']!, greaterThan(4.5));
+    });
+
+    test('buildAiTrainingReport outputs structured body comp, muscle volume, PRs, and workouts', () {
+      setAppLanguage('zh');
+      addTearDown(() => setAppLanguage('en'));
+
+      fit.addBodyComposition(displayWeight: 75, bodyFatPct: 16);
+      final squat = kExercises.firstWhere((e) => e.equipment == 'Barbell' && e.primary == 'quads' && e.secondary.length >= 2);
+      fit.sessions.add(LoggedSession(DateTime.now().subtract(const Duration(hours: 4)), 2400, [
+        LoggedExercise(squat.id, squat.name, squat.primary, [
+          LoggedSet(6, 100, rpe: 8.5, note: '状态很好'),
+          LoggedSet(6, 100),
+        ]),
+      ]));
+
+      final md = buildAiTrainingReport();
+      expect(md, contains('# FitMane 训练与体成分档案'));
+      expect(md, contains('75'));
+      expect(md, contains('16.0%'));
+      expect(md, contains('近7天等效组'));
+      expect(md, contains('Top PR'));
+      expect(md, contains('100'));
+      expect(md, contains('状态很好'));
     });
   });
 }

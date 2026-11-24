@@ -334,4 +334,42 @@ class ExtraStrings {
   static String get effectiveVolumeHint => _zh
       ? '结合体重/体脂（瘦体重）、动作复合系数、实际重量与努力度折算等效组数；历史记录自动重算，可在首页随时切换回原始组数。'
       : 'Weights sets by lean mass, compound factor, load, and effort. Applies to past logs automatically.';
+
+  // AI Cloud Drive overwrite export (v2.4.9)
+  static String get aiCloudExportTitle =>
+      _zh ? '导出 AI 训练档案（谷歌云盘）' : 'AI Cloud Export (Google Drive)';
+  static String get aiCloudExportSubtitle => _zh
+      ? '导出为可读 Markdown 并默认覆盖旧文件，供 Gemini / ChatGPT 直接读取分析'
+      : 'Overwrite one Markdown archive on Google Drive for Gemini & ChatGPT';
+  static String get aiCloudExportGuide => _zh
+      ? '首次点击下方按钮，在系统文件选择器左侧选「Google 云端硬盘」并保存 FitMane-AI-Summary.md。之后每次导出都会直接覆盖同一份旧文件，在 Gemini 中 @Google Drive 即可直接读取最新训练与体成分数据。'
+      : 'Pick Google Drive in the system file picker to save FitMane-AI-Summary.md once. Future exports overwrite the exact same file so Gemini and ChatGPT always read your latest logs.';
+  static String get aiCloudPickAndExport =>
+      _zh ? '选择谷歌云盘位置并导出' : 'Choose Google Drive File & Export';
+  static String get aiCloudOverwriteNow =>
+      _zh ? '立即覆盖更新到云盘' : 'Overwrite Cloud File Now';
+  static String get aiCloudChangeFile =>
+      _zh ? '重新选择云盘位置' : 'Change Cloud File';
+  static String get aiCloudAutoSync =>
+      _zh ? '训练记录变动后自动覆盖更新' : 'Auto-overwrite after workouts';
+  static String get aiCloudAutoSyncHint => _zh
+      ? '新增或修改训练记录后，自动将最新档案覆盖写入已绑定的云盘文件。'
+      : 'Automatically overwrite the bound cloud file shortly after logging workouts.';
+  static String get aiCloudCopyMarkdown =>
+      _zh ? '复制 Markdown 文本' : 'Copy Markdown';
+  static String get aiCloudShareFile =>
+      _zh ? '通过系统分享 .md 文件' : 'Share .md File';
+  static String get aiCloudExportSuccess =>
+      _zh ? '已成功覆盖更新云盘 AI 训练档案' : 'Updated AI training archive in cloud';
+  static String get aiCloudExportFailed => _zh
+      ? '写入云盘失败，请重新选择云盘位置或改用「分享 .md 文件」'
+      : 'Could not overwrite file. Please re-pick the file or share .md directly.';
+  static String get aiCloudCopiedToast =>
+      _zh ? '已复制完整 AI 训练档案到剪贴板' : 'Copied AI training archive to clipboard';
+  static String get aiCloudNotBound =>
+      _zh ? '尚未绑定云盘文件' : 'No cloud file bound yet';
+  static String aiCloudLastSynced(String time) =>
+      _zh ? '上次覆盖更新：$time' : 'Last updated: $time';
+  static String get aiCloudNeverSynced =>
+      _zh ? '尚未同步' : 'Not synced yet';
 }
