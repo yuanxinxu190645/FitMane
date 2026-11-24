@@ -673,7 +673,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *FitMane-x86_64
 
     test('effectiveMuscleSets weights compound heavy lifts by lean mass and recalculates history', () {
       expect(fit.useEffectiveVolume, isTrue);
-      expect(fit.effectiveLeanMassBaseline.source, 'default');
+      expect(fit.effectiveLeanMassBaseline.source, 'weight');
 
       fit.addBodyComposition(displayWeight: 75, bodyFatPct: 16);
       final base = fit.effectiveLeanMassBaseline;
