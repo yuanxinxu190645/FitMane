@@ -173,6 +173,13 @@ Future<double?> askNumber(
   return double.tryParse((raw ?? '').trim().replaceAll(',', '.'));
 }
 
+String _fmtNum(double v) {
+  final r = (v * 100).round() / 100;
+  if (r == r.roundToDouble()) return '${r.round()}';
+  final s = r.toStringAsFixed(2);
+  return s.endsWith('0') ? s.substring(0, s.length - 1) : s;
+}
+
 double barbellTotalFromPerSide(double barWeight, double perSideWeight) {
   final side = perSideWeight < 0 ? 0.0 : perSideWeight;
   final total = barWeight + side * 2;
@@ -187,8 +194,9 @@ Future<double?> askBarbellWeight(
 }) async {
   final gc = context.gc;
   var perSideMode = false;
-  final controller = TextEditingController(text: fmt(initialTotal))
-    ..selection = TextSelection(baseOffset: 0, extentOffset: fmt(initialTotal).length);
+  final initText = _fmtNum(initialTotal);
+  final controller = TextEditingController(text: initText)
+    ..selection = TextSelection(baseOffset: 0, extentOffset: initText.length);
 
   double? parseInput() => double.tryParse(controller.text.trim().replaceAll(',', '.'));
 
@@ -203,7 +211,7 @@ Future<double?> askBarbellWeight(
     builder: (dctx) => StatefulBuilder(
       builder: (dctx, setState) {
         final v = parseInput();
-        final barText = '${fmt(barWeight)} $unit';
+        final barText = '${_fmtNum(barWeight)} $unit';
         final previewTotal = v != null ? barbellTotalFromPerSide(barWeight, v) : barWeight;
         return appDialog(
           gc,
@@ -224,7 +232,7 @@ Future<double?> askBarbellWeight(
                         if (!perSideMode) return;
                         final cur = parseInput();
                         final total = cur != null ? barbellTotalFromPerSide(barWeight, cur) : initialTotal;
-                        final txt = fmt(total);
+                        final txt = _fmtNum(total);
                         controller.value = TextEditingValue(
                           text: txt,
                           selection: TextSelection(baseOffset: 0, extentOffset: txt.length),
@@ -257,7 +265,7 @@ Future<double?> askBarbellWeight(
                         if (perSideMode) return;
                         final cur = parseInput() ?? initialTotal;
                         final side = ((cur - barWeight) / 2).clamp(0.0, 500.0);
-                        final txt = fmt((side * 100).round() / 100);
+                        final txt = _fmtNum(side);
                         controller.value = TextEditingValue(
                           text: txt,
                           selection: TextSelection(baseOffset: 0, extentOffset: txt.length),
@@ -288,9 +296,9 @@ Future<double?> askBarbellWeight(
               Text(
                 perSideMode
                     ? ExtraStrings.barbellPerSidePreview(
-                        '${fmt(previewTotal)} $unit',
+                        '${_fmtNum(previewTotal)} $unit',
                         barText,
-                        '${fmt(v ?? 0)} $unit',
+                        '${_fmtNum(v ?? 0)} $unit',
                       )
                     : ExtraStrings.barbellInputHint(barText),
                 textAlign: TextAlign.center,
