@@ -132,6 +132,7 @@ String buildAiTrainingReport({DateTime? now}) {
             SetKind.drop => '(递减)',
             SetKind.failure => '(力竭)',
             SetKind.restPause => '(休息暂停)',
+            SetKind.cluster => '(集群组)',
             SetKind.normal => '',
           };
           final rpeMark = st.rpe != null ? ' @RPE${st.rpe!.toStringAsFixed(1)}' : '';
