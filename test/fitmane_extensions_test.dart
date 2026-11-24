@@ -668,6 +668,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *FitMane-x86_64
       await tester.tap(find.text(t.set));
       await tester.pumpAndSettle();
       expect(bbResult, 70);
+      await tester.pump(const Duration(milliseconds: 700));
     });
   });
 }
