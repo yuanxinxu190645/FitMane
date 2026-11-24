@@ -35,7 +35,8 @@ String _formatSetSummary(LoggedExercise e, LoggedSet s) {
   }
   final repsText = s.sided ? t.sidesReps(s.left ?? 0, s.right ?? 0) : '${s.reps}';
   if (!fit.isRepsOnly(e.id) && s.weight > 0) {
-    return '${fit.weightLabel(s.weight)} × $repsText';
+    final pairedSuffix = (!s.sided && fit.isPaired(e.id)) ? '×2' : '';
+    return '${fit.weightLabel(s.weight)}$pairedSuffix × $repsText';
   }
   return s.sided ? repsText : t.repCount(s.reps);
 }
@@ -446,7 +447,7 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
                 children: [
                   if (prev != null && prevSummary.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 10, left: 2),
+                      padding: const EdgeInsets.only(bottom: 8, left: 2),
                       child: Row(
                         children: [
                           Icon(PhosphorIconsRegular.clockCounterClockwise, size: 13, color: gc.accent),
@@ -464,9 +465,14 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
                         ],
                       ),
                     ),
+                  if (!repsOnly &&
+                      !fit.loggedDistance(e) &&
+                      !fit.loggedTimed(e) &&
+                      (catalogEx?.equipment == 'Dumbbell' || catalogEx?.equipment == 'Barbell'))
+                    _equipmentWeightBanner(context, gc, e, catalogEx!.equipment),
                   for (var i = 0; i < e.sets.length; i++) ...[
                     if (i > 0) const SizedBox(height: 8),
-                    _setEditorRow(context, gc, s, e, i, repsOnly),
+                    _setEditorRow(context, gc, s, e, i, repsOnly, catalogEx?.equipment),
                   ],
                   const SizedBox(height: 10),
                   Pressable(
@@ -503,14 +509,113 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
     );
   }
 
+  Widget _equipmentWeightBanner(
+    BuildContext context,
+    GymColors gc,
+    LoggedExercise e,
+    String equipment,
+  ) {
+    if (equipment == 'Dumbbell') {
+      final paired = fit.isPaired(e.id);
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Pressable(
+          scale: 0.98,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            fit.togglePaired(e.id);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: paired ? gc.accentSoft : gc.bgRaised,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  PhosphorIconsRegular.barbell,
+                  size: 13,
+                  color: paired ? gc.accent : gc.textSecondary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    paired
+                        ? ExtraStrings.dumbbellBannerPaired
+                        : ExtraStrings.dumbbellBannerSingle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.f(
+                      11.5,
+                      weight: FontWeight.w600,
+                      color: paired ? gc.accent : gc.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final bar = fit.barFor(e.id, equipment: 'Barbell');
+    final topW = fit.toDisplayWeight(e.topWeight);
+    final unit = fit.units;
+    final barText = '${fmt(bar)}$unit';
+    final label = topW > bar + 0.01
+        ? ExtraStrings.barbellBanner(barText, '${fmt(((topW - bar) / 2 * 100).round() / 100)}$unit')
+        : ExtraStrings.barbellBannerBarOnly(barText);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Pressable(
+        scale: 0.98,
+        onTap: () async {
+          HapticFeedback.selectionClick();
+          final v = await askNumber(
+            context,
+            title: t.barWeightExercise,
+            initial: fmt(bar),
+            decimal: true,
+          );
+          if (v != null) fit.setExerciseBar(e.id, v);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: gc.bgRaised,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(PhosphorIconsRegular.barbell, size: 13, color: gc.sage),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.f(11.5, weight: FontWeight.w600, color: gc.textSecondary),
+                ),
+              ),
+              Icon(PhosphorIconsRegular.pencilSimple, size: 12, color: gc.textTertiary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _setEditorRow(
     BuildContext context,
     GymColors gc,
     LoggedSession s,
     LoggedExercise e,
     int i,
-    bool repsOnly,
-  ) {
+    bool repsOnly, [
+    String? equipment,
+  ]) {
     final set = e.sets[i];
     final distance = fit.loggedDistance(e);
     final timed = !distance && fit.loggedTimed(e);
@@ -565,8 +670,14 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
 
     final shownWeight = (fit.toDisplayWeight(set.weight) * 100).round() / 100;
     final isPr = fit.isQuickLogSetPr(e, i, _day);
+    final unitUpper = fit.units.toUpperCase();
+    final weightLabel = switch (equipment) {
+      'Dumbbell' => ExtraStrings.dumbbellWeightCol(unitUpper),
+      'Barbell' => ExtraStrings.barbellWeightCol(unitUpper),
+      _ => t.weightCol(unitUpper),
+    };
     final weightCell = cell(
-      t.weightCol(fit.units.toUpperCase()),
+      weightLabel,
       fmt(shownWeight),
       () {
         fit.bumpLoggedWeight(e, i, -1);
@@ -578,12 +689,30 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
       },
       minWidth: 32,
       edit: (ctx) async {
-        final v = await askNumber(
-          ctx,
-          title: t.weightCol(fit.units.toUpperCase()),
-          initial: fmt(shownWeight),
-          decimal: true,
-        );
+        final double? v;
+        if (equipment == 'Barbell') {
+          v = await askBarbellWeight(
+            ctx,
+            unit: fit.units,
+            initialTotal: shownWeight,
+            barWeight: fit.barFor(e.id, equipment: 'Barbell'),
+          );
+        } else if (equipment == 'Dumbbell') {
+          v = await askNumber(
+            ctx,
+            title: ExtraStrings.dumbbellInputTitle(unitUpper),
+            subtitle: ExtraStrings.dumbbellInputHint(paired: fit.isPaired(e.id)),
+            initial: fmt(shownWeight),
+            decimal: true,
+          );
+        } else {
+          v = await askNumber(
+            ctx,
+            title: t.weightCol(unitUpper),
+            initial: fmt(shownWeight),
+            decimal: true,
+          );
+        }
         if (v != null) {
           fit.setLoggedWeightShown(e, i, v);
           if (context.mounted) _checkPrToast(context, gc, e, i);

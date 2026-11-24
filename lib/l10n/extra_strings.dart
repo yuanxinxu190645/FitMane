@@ -278,4 +278,39 @@ class ExtraStrings {
       _zh ? '更新前已自动备份训练数据' : 'Training data backed up before update';
   static String get sha256VerifiedHint =>
       _zh ? '已通过 SHA-256 完整性校验' : 'SHA-256 integrity verified';
+
+  // Dumbbell & barbell weight clarity (v2.4.7)
+  static String dumbbellWeightCol(String unit) =>
+      _zh ? '单只 ($unit)' : 'PER DB ($unit)';
+  static String barbellWeightCol(String unit) =>
+      _zh ? '含杠 ($unit)' : 'TOTAL ($unit)';
+  static String dumbbellInputTitle(String unit) =>
+      _zh ? '单只哑铃重量 ($unit)' : 'Single Dumbbell ($unit)';
+  static String dumbbellInputHint({required bool paired}) {
+    if (_zh) {
+      return paired
+          ? '请输入单只哑铃重量（容量自动按一对 ×2 计算）'
+          : '请输入单只哑铃重量（照哑铃上刻的数字填）';
+    }
+    return paired
+        ? 'Enter weight of ONE dumbbell (volume counts ×2)'
+        : 'Enter weight of ONE dumbbell';
+  }
+  static String get dumbbellBannerPaired =>
+      _zh ? '哑铃 · 填单只（容量自动 ×2）' : 'Dumbbell · per hand (×2 volume)';
+  static String get dumbbellBannerSingle =>
+      _zh ? '哑铃 · 填单只（点此开启一对 ×2）' : 'Dumbbell · per hand (tap for ×2)';
+  static String barbellInputTitle(String unit) =>
+      _zh ? '杠铃含杠总重 ($unit)' : 'Barbell Total ($unit)';
+  static String barbellInputHint(String barText) => _zh
+      ? '当前杆重 $barText · 可直接输总重或切换按单边片重换算'
+      : 'Bar $barText · enter total or switch to per-side plates';
+  static String get barbellModeTotal => _zh ? '含杠总重' : 'Total';
+  static String get barbellModePerSide => _zh ? '单边片重' : 'Per side';
+  static String barbellPerSidePreview(String total, String bar, String side) =>
+      _zh ? '= $total（杆 $bar + 单边 $side × 2）' : '= $total (bar $bar + $side × 2)';
+  static String barbellBanner(String barText, String sideText) =>
+      _zh ? '含杠总重 · 杆 $barText + 单边 $sideText' : 'Total · Bar $barText + $sideText/side';
+  static String barbellBannerBarOnly(String barText) =>
+      _zh ? '含杠总重 · 当前杆重 $barText（点此修改）' : 'Total · Bar $barText (tap to edit)';
 }

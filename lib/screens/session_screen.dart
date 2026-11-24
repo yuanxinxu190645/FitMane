@@ -4,6 +4,7 @@ import '../widgets/body_map.dart';
 import 'package:flutter/services.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 
+import '../l10n/extra_strings.dart';
 import '../l10n/l10n.dart';
 import '../models/exercise.dart';
 import '../models/live_session.dart';
@@ -1178,7 +1179,8 @@ class SessionScreen extends StatelessWidget {
         Expanded(flex: _prevFlex, child: label(t.previousCol)),
       ],
       for (final h in _headers(mode, repsOnly, sided, exId == null ? fit.units : fit.unitsFor(exId),
-          exId == null ? fit.distanceUnit : fit.distanceUnitFor(exId))) ...[
+          exId == null ? fit.distanceUnit : fit.distanceUnitFor(exId),
+          equipment: exId == null ? null : fit.exerciseById(exId)?.equipment)) ...[
         SizedBox(width: gap),
         Expanded(flex: _cellFlex, child: label(h)),
       ],
@@ -1448,23 +1450,32 @@ class SessionScreen extends StatelessWidget {
             onSave: (v) => fit.setSessionRepsRight(exIdx, j, v.round()),
           ),
         );
-    Widget weight() => step(
-          gc,
-          fit.weightValueFor(exId, st.weight),
-          () => fit.bumpSessionWeight(exIdx, j, -1),
-          () => fit.bumpSessionWeight(exIdx, j, 1),
-          26,
-          onEdit: (context) => _ruler(
-            context,
-            title: t.weightTitle(fit.unitsFor(exId).toUpperCase()),
-            value: fit.toShownFor(exId, st.weight),
-            max: fit.isLbFor(exId) ? 1540 : 700,
-            step: fit.rulerStepFor(exId),
-            majorEvery: 10,
-            unit: fit.unitsFor(exId),
-            onSave: (v) => fit.setSessionWeightShown(exIdx, j, v),
-          ),
-        );
+    Widget weight() {
+      final eq = fit.exerciseById(exId)?.equipment;
+      final unitUp = fit.unitsFor(exId).toUpperCase();
+      final pickerTitle = switch (eq) {
+        'Dumbbell' => ExtraStrings.dumbbellInputTitle(unitUp),
+        'Barbell' => ExtraStrings.barbellInputTitle(unitUp),
+        _ => t.weightTitle(unitUp),
+      };
+      return step(
+        gc,
+        fit.weightValueFor(exId, st.weight),
+        () => fit.bumpSessionWeight(exIdx, j, -1),
+        () => fit.bumpSessionWeight(exIdx, j, 1),
+        26,
+        onEdit: (context) => _ruler(
+          context,
+          title: pickerTitle,
+          value: fit.toShownFor(exId, st.weight),
+          max: fit.isLbFor(exId) ? 1540 : 700,
+          step: fit.rulerStepFor(exId),
+          majorEvery: 10,
+          unit: fit.unitsFor(exId),
+          onSave: (v) => fit.setSessionWeightShown(exIdx, j, v),
+        ),
+      );
+    }
     Widget time() => step(
           gc,
           durationLabel(st.sec ?? 0),
@@ -1517,14 +1528,22 @@ class SessionScreen extends StatelessWidget {
     };
   }
 
-  List<String> _headers(String mode, bool repsOnly, bool sided, String unit, String dist) => switch (mode) {
-        'cardio' => [t.distanceCol(dist.toUpperCase()), t.timeCol],
-        'time' => [sided ? t.timePerSideCol : t.timeCol, if (!repsOnly) t.weightCol(unit.toUpperCase())],
-        _ => [
-            if (sided) ...[t.repsLeftCol, t.repsRightCol] else t.repsCol,
-            if (!repsOnly) t.weightCol(unit.toUpperCase()),
-          ],
-      };
+  List<String> _headers(String mode, bool repsOnly, bool sided, String unit, String dist, {String? equipment}) {
+    final unitUp = unit.toUpperCase();
+    final weightHeader = switch (equipment) {
+      'Dumbbell' => ExtraStrings.dumbbellWeightCol(unitUp),
+      'Barbell' => ExtraStrings.barbellWeightCol(unitUp),
+      _ => t.weightCol(unitUp),
+    };
+    return switch (mode) {
+      'cardio' => [t.distanceCol(dist.toUpperCase()), t.timeCol],
+      'time' => [sided ? t.timePerSideCol : t.timeCol, if (!repsOnly) weightHeader],
+      _ => [
+          if (sided) ...[t.repsLeftCol, t.repsRightCol] else t.repsCol,
+          if (!repsOnly) weightHeader,
+        ],
+    };
+  }
 
   Widget _setRow(GymColors gc, int exIdx, int j, SessionSet st, bool repsOnly, bool locked,
       {bool list = false, LoggedSet? prev}) {

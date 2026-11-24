@@ -19,6 +19,7 @@ import 'package:gymmane/services/local_store.dart';
 import 'package:gymmane/services/sha256.dart';
 import 'package:gymmane/state/fit_state.dart';
 import 'package:gymmane/theme/app_theme.dart';
+import 'package:gymmane/widgets/dialogs.dart';
 import 'package:gymmane/widgets/exercise_media.dart';
 import 'package:gymmane/widgets/weekly_muscle_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -600,6 +601,73 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *FitMane-x86_64
       await tester.tap(find.text(ExtraStrings.weeklyMuscleShowMore));
       await tester.pumpAndSettle();
       expect(find.text(ExtraStrings.weeklyMuscleShowLess), findsOneWidget);
+    });
+
+    test('barbellTotalFromPerSide calculates bar + per-side plates accurately', () {
+      expect(barbellTotalFromPerSide(20, 20), 60);
+      expect(barbellTotalFromPerSide(20, 12.5), 45);
+      expect(barbellTotalFromPerSide(10, 5), 20);
+      expect(barbellTotalFromPerSide(20, -5), 20);
+    });
+
+    testWidgets('askNumber shows dumbbell single-hand reminder and askBarbellWeight converts per-side', (tester) async {
+      setAppLanguage('zh');
+      addTearDown(() => setAppLanguage('en'));
+
+      double? dbResult;
+      double? bbResult;
+
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.dark,
+        home: Scaffold(
+          body: Builder(
+            builder: (ctx) => Column(
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    dbResult = await askNumber(
+                      ctx,
+                      title: ExtraStrings.dumbbellInputTitle('KG'),
+                      subtitle: ExtraStrings.dumbbellInputHint(paired: false),
+                      initial: '15',
+                      decimal: true,
+                    );
+                  },
+                  child: const Text('DB'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    bbResult = await askBarbellWeight(
+                      ctx,
+                      unit: 'kg',
+                      initialTotal: 60,
+                      barWeight: 20,
+                    );
+                  },
+                  child: const Text('BB'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('DB'));
+      await tester.pumpAndSettle();
+      expect(find.text(ExtraStrings.dumbbellInputHint(paired: false)), findsOneWidget);
+      await tester.tap(find.text(t.set));
+      await tester.pumpAndSettle();
+      expect(dbResult, 15);
+
+      await tester.tap(find.text('BB'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(ExtraStrings.barbellModePerSide));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '25');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(t.set));
+      await tester.pumpAndSettle();
+      expect(bbResult, 70);
     });
   });
 }

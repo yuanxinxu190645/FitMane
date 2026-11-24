@@ -33,7 +33,8 @@ class QuickLogCard extends StatelessWidget {
     }
     final repsStr = best.sided ? '${best.left ?? 0}/${best.right ?? 0}' : '${best.reps}';
     if (!fit.isRepsOnly(e.id) && best.weight > 0) {
-      return '${fit.weightLabel(best.weight)} × $repsStr';
+      final pairedSuffix = (!best.sided && fit.isPaired(e.id)) ? '×2' : '';
+      return '${fit.weightLabel(best.weight)}$pairedSuffix × $repsStr';
     }
     return t.repCount(best.reps);
   }

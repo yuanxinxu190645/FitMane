@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/extra_strings.dart';
 import '../l10n/l10n.dart';
 import '../models/note.dart';
 import '../theme/app_colors.dart';
@@ -114,6 +115,7 @@ Future<double?> askNumber(
   required String title,
   required String initial,
   required bool decimal,
+  String? subtitle,
 }) async {
   final gc = context.gc;
   final controller = TextEditingController(text: initial)
@@ -124,20 +126,41 @@ Future<double?> askNumber(
     builder: (dctx) => appDialog(
       gc,
       title: Text(titleCase(title), style: AppTheme.f(19, weight: FontWeight.w800, color: gc.text)),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        keyboardType: TextInputType.numberWithOptions(decimal: decimal),
-        textAlign: TextAlign.center,
-        style: AppTheme.f(34, weight: FontWeight.w800, color: gc.text, height: 1.1),
-        cursorColor: gc.accent,
-        onSubmitted: (v) => Navigator.of(dctx).pop(v),
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: gc.bgRaised2,
-          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
-        ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (subtitle != null && subtitle.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: gc.accentSoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: AppTheme.f(12, weight: FontWeight.w600, color: gc.accent, height: 1.3),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.numberWithOptions(decimal: decimal),
+            textAlign: TextAlign.center,
+            style: AppTheme.f(34, weight: FontWeight.w800, color: gc.text, height: 1.1),
+            cursorColor: gc.accent,
+            onSubmitted: (v) => Navigator.of(dctx).pop(v),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: gc.bgRaised2,
+              contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+            ),
+          ),
+        ],
       ),
       actions: [
         dialogAction(t.cancel, gc.textSecondary, () => Navigator.of(dctx).pop(), strong: false),
@@ -148,6 +171,165 @@ Future<double?> askNumber(
   Future<void>.delayed(const Duration(milliseconds: 600), controller.dispose);
 
   return double.tryParse((raw ?? '').trim().replaceAll(',', '.'));
+}
+
+double barbellTotalFromPerSide(double barWeight, double perSideWeight) {
+  final side = perSideWeight < 0 ? 0.0 : perSideWeight;
+  final total = barWeight + side * 2;
+  return (total * 100).round() / 100;
+}
+
+Future<double?> askBarbellWeight(
+  BuildContext context, {
+  required String unit,
+  required double initialTotal,
+  required double barWeight,
+}) async {
+  final gc = context.gc;
+  var perSideMode = false;
+  final controller = TextEditingController(text: fmt(initialTotal))
+    ..selection = TextSelection(baseOffset: 0, extentOffset: fmt(initialTotal).length);
+
+  double? parseInput() => double.tryParse(controller.text.trim().replaceAll(',', '.'));
+
+  double? resolveResult() {
+    final v = parseInput();
+    if (v == null) return null;
+    return perSideMode ? barbellTotalFromPerSide(barWeight, v) : v;
+  }
+
+  final result = await showAppDialog<double>(
+    context: context,
+    builder: (dctx) => StatefulBuilder(
+      builder: (dctx, setState) {
+        final v = parseInput();
+        final barText = '${fmt(barWeight)} $unit';
+        final previewTotal = v != null ? barbellTotalFromPerSide(barWeight, v) : barWeight;
+        return appDialog(
+          gc,
+          title: Text(
+            ExtraStrings.barbellInputTitle(unit.toUpperCase()),
+            style: AppTheme.f(19, weight: FontWeight.w800, color: gc.text),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Pressable(
+                      scale: 0.96,
+                      onTap: () {
+                        if (!perSideMode) return;
+                        final cur = parseInput();
+                        final total = cur != null ? barbellTotalFromPerSide(barWeight, cur) : initialTotal;
+                        final txt = fmt(total);
+                        controller.value = TextEditingValue(
+                          text: txt,
+                          selection: TextSelection(baseOffset: 0, extentOffset: txt.length),
+                        );
+                        setState(() => perSideMode = false);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: !perSideMode ? gc.ember : gc.bgRaised2,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          ExtraStrings.barbellModeTotal,
+                          style: AppTheme.f(
+                            12.5,
+                            weight: FontWeight.w700,
+                            color: !perSideMode ? gc.onEmber : gc.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Pressable(
+                      scale: 0.96,
+                      onTap: () {
+                        if (perSideMode) return;
+                        final cur = parseInput() ?? initialTotal;
+                        final side = ((cur - barWeight) / 2).clamp(0.0, 500.0);
+                        final txt = fmt((side * 100).round() / 100);
+                        controller.value = TextEditingValue(
+                          text: txt,
+                          selection: TextSelection(baseOffset: 0, extentOffset: txt.length),
+                        );
+                        setState(() => perSideMode = true);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: perSideMode ? gc.ember : gc.bgRaised2,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          ExtraStrings.barbellModePerSide,
+                          style: AppTheme.f(
+                            12.5,
+                            weight: FontWeight.w700,
+                            color: perSideMode ? gc.onEmber : gc.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                perSideMode
+                    ? ExtraStrings.barbellPerSidePreview(
+                        '${fmt(previewTotal)} $unit',
+                        barText,
+                        '${fmt(v ?? 0)} $unit',
+                      )
+                    : ExtraStrings.barbellInputHint(barText),
+                textAlign: TextAlign.center,
+                style: AppTheme.f(
+                  11.5,
+                  weight: FontWeight.w600,
+                  color: perSideMode ? gc.accent : gc.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textAlign: TextAlign.center,
+                style: AppTheme.f(34, weight: FontWeight.w800, color: gc.text, height: 1.1),
+                cursorColor: gc.accent,
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) => Navigator.of(dctx).pop(resolveResult()),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: gc.bgRaised2,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            dialogAction(t.cancel, gc.textSecondary, () => Navigator.of(dctx).pop(), strong: false),
+            dialogAction(t.set, gc.accent, () => Navigator.of(dctx).pop(resolveResult())),
+          ],
+        );
+      },
+    ),
+  );
+  Future<void>.delayed(const Duration(milliseconds: 600), controller.dispose);
+  return result;
 }
 
 Future<NoteLink?> askLink(BuildContext context, {NoteLink? initial}) async {
