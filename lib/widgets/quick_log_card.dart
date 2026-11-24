@@ -54,6 +54,7 @@ class QuickLogCard extends StatelessWidget {
             muscleLabel(rec.highlightMuscle),
             rec.weeklySets,
             recovered: rec.recovery >= 0.75,
+            effective: fit.useEffectiveVolume,
           )
         : '';
 

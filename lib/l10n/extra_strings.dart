@@ -243,15 +243,21 @@ class ExtraStrings {
       _zh ? '新纪录！$name 刷新个人最佳' : 'New PR! $name personal best';
   static String smartRecReason(
     String muscle,
-    int weeklySets, {
+    double weeklySets, {
     required bool recovered,
+    bool effective = false,
   }) {
+    final numStr = effective && weeklySets != weeklySets.roundToDouble()
+        ? weeklySets.toStringAsFixed(1)
+        : '${weeklySets.round()}';
     if (_zh) {
+      final unit = effective ? '等效组' : '组';
       final status = recovered ? '已恢复' : '可安排';
-      return '$muscle本周 $weeklySets 组 · $status';
+      return '$muscle本周 $numStr $unit · $status';
     }
+    final unit = effective ? 'eff. sets' : 'sets';
     final status = recovered ? 'Recovered' : 'Ready';
-    return '$muscle $weeklySets sets this wk · $status';
+    return '$muscle $numStr $unit this wk · $status';
   }
   static String get autoProgressAppliedHint =>
       _zh ? '已按自动加重规则预填目标' : 'Pre-filled with auto-progression';
@@ -313,4 +319,19 @@ class ExtraStrings {
       _zh ? '含杠总重 · 杆 $barText + 单边 $sideText' : 'Total · Bar $barText + $sideText/side';
   static String barbellBannerBarOnly(String barText) =>
       _zh ? '含杠总重 · 当前杆重 $barText（点此修改）' : 'Total · Bar $barText (tap to edit)';
+
+  // Effective stimulus volume algorithm (v2.4.8)
+  static String get volumeModeEffective => _zh ? '等效组' : 'Effective';
+  static String get volumeModeRaw => _zh ? '原始组' : 'Raw sets';
+  static String effectiveVolumeCaptionLbm(String lbmText) =>
+      _zh ? '按瘦体重 $lbmText 与动作/重量加权' : 'Weighted by $lbmText lean mass & load';
+  static String effectiveVolumeCaptionWeight(String weightText) =>
+      _zh ? '按体重 $weightText 与动作/重量加权' : 'Weighted by $weightText body weight & load';
+  static String get effectiveVolumeCaptionDefault =>
+      _zh ? '按动作复合度与重量强度加权（记录体重/体脂更精准）' : 'Weighted by movement & load (log weight/BF for accuracy)';
+  static String get effectiveVolumeTitle =>
+      _zh ? '按体重/重量计算等效有效组' : 'Effective volume weighting';
+  static String get effectiveVolumeHint => _zh
+      ? '结合体重/体脂（瘦体重）、动作复合系数、实际重量与努力度折算等效组数；历史记录自动重算，可在首页随时切换回原始组数。'
+      : 'Weights sets by lean mass, compound factor, load, and effort. Applies to past logs automatically.';
 }

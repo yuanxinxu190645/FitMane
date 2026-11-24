@@ -1348,8 +1348,8 @@ class _MuscleMapCardState extends State<_MuscleMapCard> {
     if (_days == 0) return _recoveryCard(gc);
     if (_days < 0) return _untrainedCard(gc);
     final week = _days == 7;
-    final sets = week ? fit.muscleSetsThisWeek : fit.muscleSetsOver(_days);
-    final heat = week ? fit.muscleHeatThisWeek : fit.muscleHeatOver(_days);
+    final sets = week ? fit.activeMuscleSetsThisWeek : fit.activeMuscleSetsOver(_days);
+    final heat = week ? fit.activeMuscleHeatThisWeek : fit.activeMuscleHeatOver(_days);
     final focus = _focus;
     final behind = week ? fit.neglectedThisWeek : fit.neglectedMuscles(_days);
 

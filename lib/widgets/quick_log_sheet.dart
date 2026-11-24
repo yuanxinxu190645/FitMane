@@ -268,6 +268,7 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
             muscleLabel(rec.highlightMuscle),
             rec.weeklySets,
             recovered: rec.recovery >= 0.75,
+            effective: fit.useEffectiveVolume,
           )
         : '';
     return Container(
@@ -947,7 +948,7 @@ class _QuickAddExerciseSheetState extends State<_QuickAddExerciseSheet> {
     final trimmed = _query.trim();
     final smartRec = fit.smartQuickRecommendation;
     final smartRecHeader = smartRec.hasReason
-        ? '${ExtraStrings.quickLogRecommendedTitle(smartRec.title)} · ${ExtraStrings.smartRecReason(muscleLabel(smartRec.highlightMuscle), smartRec.weeklySets, recovered: smartRec.recovery >= 0.75)}'
+        ? '${ExtraStrings.quickLogRecommendedTitle(smartRec.title)} · ${ExtraStrings.smartRecReason(muscleLabel(smartRec.highlightMuscle), smartRec.weeklySets, recovered: smartRec.recovery >= 0.75, effective: fit.useEffectiveVolume)}'
         : ExtraStrings.quickLogRecommendedTitle(smartRec.title);
     final rec = trimmed.isEmpty
         ? [for (final ex in fit.recommendedExercises(6)) if (!fit.isArchived(ex.id)) ex]

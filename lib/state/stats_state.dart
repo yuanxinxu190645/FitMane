@@ -1221,6 +1221,164 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
     };
   }
 
+  /// Lean-mass baseline (kg) for normalizing relative lift intensity:
+  /// prefers latest bodyweight * (1 - bodyFat%), falls back to bodyweight, else 65 kg.
+  ({double kg, String source}) get effectiveLeanMassBaseline {
+    final bw = latestBodyweight?.kg ?? (profile.weightKg > 0 ? profile.weightKg : null);
+    BodyMeasure? latestBf;
+    for (final m in measures) {
+      if (m.key != 'bodyfat' || m.value < 3 || m.value > 60) continue;
+      if (latestBf == null || m.date.isAfter(latestBf.date)) latestBf = m;
+    }
+    if (bw != null && bw > 20) {
+      if (latestBf != null) {
+        final lbm = (bw * (1 - latestBf.value / 100)).clamp(30.0, 120.0);
+        return (kg: lbm, source: 'lbm');
+      }
+      return (kg: bw.clamp(35.0, 140.0), source: 'weight');
+    }
+    return (kg: 65.0, source: 'default');
+  }
+
+  static double _muscleRefRatio(String primary) => switch (primary) {
+        'quads' || 'hamstrings' || 'glutes' || 'lowerback' => 1.20,
+        'chest' || 'back' || 'trapezius' => 0.85,
+        'shoulders' || 'calves' => 0.45,
+        _ => 0.30,
+      };
+
+  /// Computes effective stimulus equivalent of a single working set,
+  /// factoring in movement compoundness, load relative to lean mass, and effort.
+  double effectiveSetWeight(
+    String exerciseId,
+    LoggedSet st, {
+    double? bestOneRmKg,
+    double? leanMassKg,
+  }) {
+    final ex = exerciseById(exerciseId);
+    final eq = ex?.equipment ?? '';
+    final primary = ex?.primary ?? 'chest';
+    final secCount = ex?.secondary.length ?? 0;
+
+    final double moveFactor;
+    if ((eq == 'Barbell' || eq == 'Weighted' || eq == 'Kettlebell') && secCount >= 2) {
+      moveFactor = 1.25;
+    } else if (secCount >= 1) {
+      moveFactor = 1.0;
+    } else {
+      moveFactor = 0.8;
+    }
+
+    final lbm = (leanMassKg ?? effectiveLeanMassBaseline.kg).clamp(30.0, 140.0);
+    final double loadFactor;
+    if (modeOf(exerciseId).isNotEmpty) {
+      loadFactor = 1.0;
+    } else if (isRepsOnly(exerciseId) || st.weight <= 0) {
+      loadFactor = (0.75 + (st.reps / 22.0).clamp(0.0, 0.45)).clamp(0.75, 1.25);
+    } else {
+      double effectiveLoad = st.weight;
+      if (isAssisted(exerciseId)) {
+        effectiveLoad = math.max(10.0, lbm - st.weight);
+      } else if (eq == 'Dumbbell' && !st.sided) {
+        final lower = (ex?.name ?? '').toLowerCase();
+        final unilateral = lower.contains('single-arm') ||
+            lower.contains('one-arm') ||
+            lower.contains('single arm') ||
+            lower.contains('one arm') ||
+            lower.contains('goblet') ||
+            lower.contains('concentration');
+        if (isPaired(exerciseId) || !unilateral) {
+          effectiveLoad = st.weight * 2;
+        }
+      }
+      final refLoad = lbm * _muscleRefRatio(primary);
+      loadFactor = (effectiveLoad / refLoad).clamp(0.75, 1.45);
+    }
+
+    final double effortFactor;
+    if (st.rpe != null) {
+      effortFactor = (0.75 + ((st.rpe! - 5.0).clamp(0.0, 5.0) / 5.0) * 0.45).clamp(0.75, 1.20);
+    } else if (bestOneRmKg != null && bestOneRmKg > 0 && st.weight > 0) {
+      final rel = (st.oneRm / bestOneRmKg).clamp(0.5, 1.05);
+      effortFactor = (0.75 + (rel - 0.55).clamp(0.0, 0.5) * 0.90).clamp(0.75, 1.20);
+    } else {
+      effortFactor = st.reps <= 6 ? 1.10 : (st.reps <= 15 ? 1.00 : 0.95);
+    }
+
+    return (moveFactor * loadFactor * effortFactor).clamp(0.45, 2.20);
+  }
+
+  Map<String, double> effectiveMuscleSetsOver(int days) {
+    final today = _dayKey(DateTime.now());
+    final start = shiftDays(today, -(days - 1));
+    return effectiveMuscleSetsBetween(start, today);
+  }
+
+  Map<String, double> effectiveMuscleSetsBetween(DateTime from, DateTime to) {
+    final a = _dayKey(from), b = _dayKey(to);
+    final base = effectiveLeanMassBaseline.kg;
+    return Map.of(_remember(
+      ('effSetsBetween', a, b, base.round()),
+      () => _effectiveMuscleSetsBetween(a, b, base),
+    ));
+  }
+
+  Map<String, double> _effectiveMuscleSetsBetween(DateTime a, DateTime b, double lbm) {
+    final best1Rm = <String, double>{};
+    for (final s in sessions) {
+      for (final e in s.exercises) {
+        final rm = e.bestOneRm;
+        if (rm > (best1Rm[e.id] ?? 0)) best1Rm[e.id] = rm;
+      }
+    }
+    final out = <String, double>{};
+    for (final s in sessions) {
+      final d = _dayKey(s.day);
+      if (d.isBefore(a) || d.isAfter(b)) continue;
+      for (final e in s.exercises) {
+        final working = e.workingSets;
+        if (working.isEmpty || !countsForMuscles(e.id)) continue;
+        var eff = 0.0;
+        final rm = best1Rm[e.id];
+        for (final st in working) {
+          eff += effectiveSetWeight(e.id, st, bestOneRmKg: rm, leanMassKg: lbm);
+        }
+        out[e.primary] = (out[e.primary] ?? 0) + eff;
+        for (final m in exerciseById(e.id)?.secondary ?? const <String>[]) {
+          out[m] = (out[m] ?? 0) + eff * 0.5;
+        }
+      }
+    }
+    return out;
+  }
+
+  Map<String, double> effectiveMuscleHeatOver(int days) {
+    final target = muscleTargetFor(days);
+    return {
+      for (final e in effectiveMuscleSetsOver(days).entries) e.key: (e.value / target).clamp(0.0, 1.0),
+    };
+  }
+
+  Map<String, double> get effectiveMuscleSetsThisWeek =>
+      effectiveMuscleSetsBetween(_weekStart, DateTime.now());
+
+  Map<String, double> get effectiveMuscleHeatThisWeek => {
+        for (final e in effectiveMuscleSetsThisWeek.entries)
+          e.key: (e.value / weeklySetTarget).clamp(0.0, 1.0),
+      };
+
+  Map<String, double> activeMuscleSetsOver(int days) =>
+      useEffectiveVolume ? effectiveMuscleSetsOver(days) : muscleSetsOver(days);
+
+  Map<String, double> get activeMuscleSetsThisWeek =>
+      useEffectiveVolume ? effectiveMuscleSetsThisWeek : muscleSetsThisWeek;
+
+  Map<String, double> activeMuscleHeatOver(int days) =>
+      useEffectiveVolume ? effectiveMuscleHeatOver(days) : muscleHeatOver(days);
+
+  Map<String, double> get activeMuscleHeatThisWeek =>
+      useEffectiveVolume ? effectiveMuscleHeatThisWeek : muscleHeatThisWeek;
+
   static const Map<String, double> _recoveryHours = {
     'chest': 60,
     'back': 60,
@@ -2014,7 +2172,7 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
     String subtitle,
     List<String> muscles,
     String highlightMuscle,
-    int weeklySets,
+    double weeklySets,
     double recovery,
     bool hasReason,
   }) get smartQuickRecommendation {
@@ -2025,7 +2183,7 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
         subtitle: base.subtitle,
         muscles: base.muscles,
         highlightMuscle: base.muscles.first,
-        weeklySets: 0,
+        weeklySets: 0.0,
         recovery: 1.0,
         hasReason: false,
       );
@@ -2037,7 +2195,7 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
       (key: 'legs', title: t.legDay, subtitle: t.legFocus, muscles: ['quads', 'hamstrings', 'glutes']),
     ];
 
-    final sets7 = muscleSetsOver(7);
+    final sets7 = activeMuscleSetsOver(7);
     final rec = muscleRecovery();
     final target = weeklyMuscleTarget.toDouble();
 
@@ -2058,7 +2216,7 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
     var bestSplit = splits.first;
     var bestScore = -1e9;
     var bestMuscle = bestSplit.muscles.first;
-    var bestSets = 0;
+    var bestSets = 0.0;
     var bestRec = 1.0;
 
     for (final sp in splits) {
@@ -2075,7 +2233,7 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
         bestScore = score;
         bestSplit = sp;
         bestMuscle = primary;
-        bestSets = primarySets.round();
+        bestSets = (primarySets * 10).round() / 10;
         bestRec = rec[primary] ?? 1.0;
       }
     }

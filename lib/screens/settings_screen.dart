@@ -497,6 +497,17 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
+                    onTap: () => fit.setUseEffectiveVolume(!fit.useEffectiveVolume),
+                    child: _prefRow(
+                      gc,
+                      PhosphorIconsRegular.scales,
+                      ExtraStrings.effectiveVolumeTitle,
+                      TinySwitch(on: fit.useEffectiveVolume),
+                      hint: ExtraStrings.effectiveVolumeHint,
+                    ),
+                  ),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => showExercisePacksSheet(context),
                     child: _prefRow(
                       gc,
@@ -1048,6 +1059,7 @@ class SettingsScreen extends StatelessWidget {
         (t.sideRest, PhosphorIconsRegular.arrowsLeftRight),
         (ExtraStrings.quickLogDefaultSetsLabel, PhosphorIconsRegular.listNumbers),
         (ExtraStrings.weeklyMuscleTargetLabel, PhosphorIconsRegular.chartBar),
+        (ExtraStrings.effectiveVolumeTitle, PhosphorIconsRegular.scales),
         (ExtraStrings.exercisePacksTitle, PhosphorIconsRegular.stack),
         (t.effortSetting, PhosphorIconsRegular.gauge),
         (t.weightStepSetting, PhosphorIconsRegular.barbell),

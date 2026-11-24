@@ -38,9 +38,16 @@ class _WeeklyMuscleCardState extends State<WeeklyMuscleCard> {
   @override
   Widget build(BuildContext context) {
     final gc = context.gc;
-    final setsMap = fit.muscleSetsOver(7);
+    final effective = fit.useEffectiveVolume;
+    final setsMap = fit.activeMuscleSetsOver(7);
     final minTarget = fit.weeklyMuscleTarget;
     final maxTarget = fit.weeklyMuscleTargetMax;
+    final base = fit.effectiveLeanMassBaseline;
+    final caption = switch (base.source) {
+      'lbm' => ExtraStrings.effectiveVolumeCaptionLbm(fit.weightLabel(base.kg)),
+      'weight' => ExtraStrings.effectiveVolumeCaptionWeight(fit.weightLabel(base.kg)),
+      _ => ExtraStrings.effectiveVolumeCaptionDefault,
+    };
     final shown = [
       ...WeeklyMuscleCard.primaryMuscles,
       if (_expanded) ...WeeklyMuscleCard.extraMuscles,
@@ -67,16 +74,55 @@ class _WeeklyMuscleCardState extends State<WeeklyMuscleCard> {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   color: gc.bgRaised2,
                   borderRadius: BorderRadius.circular(100),
                 ),
-                child: Text(
-                  ExtraStrings.weeklyMuscleRange(minTarget, maxTarget),
-                  style: AppTheme.d(11, weight: FontWeight.w600, color: gc.textSecondary),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _ModeChip(
+                      label: ExtraStrings.volumeModeEffective,
+                      selected: effective,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        fit.setUseEffectiveVolume(true);
+                      },
+                    ),
+                    _ModeChip(
+                      label: ExtraStrings.volumeModeRaw,
+                      selected: !effective,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        fit.setUseEffectiveVolume(false);
+                      },
+                    ),
+                  ],
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  effective
+                      ? caption
+                      : ExtraStrings.weeklyMuscleRange(minTarget, maxTarget),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.f(11, weight: FontWeight.w500, color: gc.textTertiary),
+                ),
+              ),
+              if (effective) ...[
+                const SizedBox(width: 8),
+                Text(
+                  ExtraStrings.weeklyMuscleRange(minTarget, maxTarget),
+                  style: AppTheme.d(10.5, weight: FontWeight.w600, color: gc.textSecondary),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
@@ -90,6 +136,7 @@ class _WeeklyMuscleCardState extends State<WeeklyMuscleCard> {
                     sets: setsMap[shown[i]] ?? 0,
                     minTarget: minTarget,
                     maxTarget: maxTarget,
+                    showDecimal: effective,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -100,6 +147,7 @@ class _WeeklyMuscleCardState extends State<WeeklyMuscleCard> {
                       sets: setsMap[shown[i + 1]] ?? 0,
                       minTarget: minTarget,
                       maxTarget: maxTarget,
+                      showDecimal: effective,
                     ),
                   )
                 else
@@ -144,23 +192,64 @@ class _WeeklyMuscleCardState extends State<WeeklyMuscleCard> {
   }
 }
 
+class _ModeChip extends StatelessWidget {
+  const _ModeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final gc = context.gc;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: selected ? gc.ember : Colors.transparent,
+          borderRadius: BorderRadius.circular(100),
+        ),
+        child: Text(
+          label,
+          style: AppTheme.f(
+            10.5,
+            weight: FontWeight.w700,
+            color: selected ? gc.onEmber : gc.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MuscleBarTile extends StatelessWidget {
   const _MuscleBarTile({
     required this.muscle,
     required this.sets,
     required this.minTarget,
     required this.maxTarget,
+    required this.showDecimal,
   });
 
   final String muscle;
   final double sets;
   final int minTarget;
   final int maxTarget;
+  final bool showDecimal;
 
   @override
   Widget build(BuildContext context) {
     final gc = context.gc;
-    final rounded = sets.round();
+    final rounded1 = (sets * 10).round() / 10;
+    final countText = showDecimal && rounded1 != rounded1.roundToDouble()
+        ? rounded1.toStringAsFixed(1)
+        : '${rounded1.round()}';
     final ratio = maxTarget > 0 ? (sets / maxTarget).clamp(0.0, 1.0) : 0.0;
     final minMark = maxTarget > 0 ? (minTarget / maxTarget).clamp(0.1, 0.9) : 0.5;
     final Color barColor;
@@ -186,7 +275,7 @@ class _MuscleBarTile extends StatelessWidget {
               ),
             ),
             Text(
-              '$rounded/$minTarget',
+              '$countText/$minTarget',
               style: AppTheme.d(
                 11.5,
                 weight: FontWeight.w700,

@@ -670,5 +670,50 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *FitMane-x86_64
       expect(bbResult, 70);
       await tester.pump(const Duration(milliseconds: 700));
     });
+
+    test('effectiveMuscleSets weights compound heavy lifts by lean mass and recalculates history', () {
+      expect(fit.useEffectiveVolume, isTrue);
+      expect(fit.effectiveLeanMassBaseline.source, 'default');
+
+      fit.addBodyComposition(displayWeight: 75, bodyFatPct: 16);
+      final base = fit.effectiveLeanMassBaseline;
+      expect(base.source, 'lbm');
+      expect(base.kg, closeTo(63.0, 0.2));
+
+      final squat = kExercises.firstWhere((e) => e.equipment == 'Barbell' && e.primary == 'quads' && e.secondary.length >= 2);
+      final dbPress = kExercises.firstWhere((e) => e.equipment == 'Dumbbell' && e.primary == 'shoulders' && e.secondary.isNotEmpty);
+
+      // Historical session 10 days ago + recent session 1 day ago
+      final oldDay = DateTime.now().subtract(const Duration(days: 10));
+      final recentDay = DateTime.now().subtract(const Duration(days: 1));
+      fit.sessions.add(LoggedSession(oldDay, 1800, [
+        LoggedExercise(squat.id, squat.name, squat.primary, List.generate(3, (_) => LoggedSet(6, 100))),
+      ]));
+      fit.sessions.add(LoggedSession(recentDay, 1800, [
+        LoggedExercise(squat.id, squat.name, squat.primary, List.generate(3, (_) => LoggedSet(6, 100))),
+        LoggedExercise(dbPress.id, dbPress.name, dbPress.primary, List.generate(5, (_) => LoggedSet(10, 12.5))),
+      ]));
+
+      final eff7 = fit.effectiveMuscleSetsOver(7);
+      final raw7 = fit.muscleSetsOver(7);
+      expect(raw7['quads'], 3);
+      expect(raw7['shoulders'], 5);
+      // 3 heavy barbell squat sets beat 5 moderate dumbbell shoulder press sets in effective stimulus
+      expect(eff7['quads']!, greaterThan(eff7['shoulders']!));
+      expect(eff7['quads']!, greaterThan(4.5));
+
+      // Historical 30-day window recalculates automatically
+      final eff30 = fit.effectiveMuscleSetsOver(30);
+      expect(eff30['quads']!, greaterThan(eff7['quads']!));
+
+      // Toggle persists and switches activeMuscleSetsOver
+      fit.setUseEffectiveVolume(false);
+      expect(fit.activeMuscleSetsOver(7)['quads'], 3);
+      fit.persistNow();
+      fit.loadFromStore();
+      expect(fit.useEffectiveVolume, isFalse);
+      fit.setUseEffectiveVolume(true);
+      expect(fit.activeMuscleSetsOver(7)['quads']!, greaterThan(4.5));
+    });
   });
 }

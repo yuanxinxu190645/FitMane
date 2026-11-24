@@ -40,6 +40,7 @@ mixin SettingsState on FitCore, ToolsState, LibraryState {
   int quickLogDefaultSets = 5;
   bool showMuscleVol = true;
   int weeklyMuscleTarget = 10;
+  bool useEffectiveVolume = true;
   int get weeklyMuscleTargetMax => (weeklyMuscleTarget * 2).clamp(weeklyMuscleTarget + 4, 30);
   bool showFocus = true;
   bool showRecommended = true;
@@ -664,6 +665,13 @@ mixin SettingsState on FitCore, ToolsState, LibraryState {
     final next = count.clamp(4, 20);
     if (next == weeklyMuscleTarget) return;
     weeklyMuscleTarget = next;
+    _persist();
+    notifyListeners();
+  }
+
+  void setUseEffectiveVolume(bool on) {
+    if (on == useEffectiveVolume) return;
+    useEffectiveVolume = on;
     _persist();
     notifyListeners();
   }
