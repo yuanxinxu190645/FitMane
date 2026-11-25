@@ -739,5 +739,56 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *FitMane-x86_64
       expect(md, contains('100'));
       expect(md, contains('状态很好'));
     });
+
+    test('multi-stage drop-set chains batch-create, serialize, compute volume/1RM/effective sets, and export', () {
+      final fly = kExercises.firstWhere((e) => e.equipment == 'Dumbbell' && e.primary == 'shoulders');
+      final today = DateTime.now();
+      final added = fit.quickLogAddExercise(fly, day: today);
+      expect(added.exercise.sets, hasLength(5));
+
+      const stages = [
+        DropStage(weight: 6, reps: 12),
+        DropStage(weight: 4, reps: 12),
+        DropStage(weight: 2, reps: 12),
+      ];
+      // Replaces the 5 untouched 0-weight default sets with 5 drop-set chains
+      fit.addDropChainSets(added.exercise, stages, count: 5);
+      expect(added.exercise.sets, hasLength(5));
+      for (final st in added.exercise.sets) {
+        expect(st.isDropChain, isTrue);
+        expect(st.kind, SetKind.drop);
+        expect(st.weight, 6);
+        expect(st.totalReps, 36);
+        expect(st.volume, closeTo(6 * 12 + 4 * 12 + 2 * 12, 0.001)); // 144 kg per big set
+        expect(st.oneRm, closeTo(6 * (1 + 12 / 30), 0.01)); // 8.4 kg (from top stage, not 36 reps)
+      }
+
+      // Edit one big set independently (e.g. fatigued 5th set: 6x10 -> 4x10 -> 2x12)
+      fit.setLoggedDropChain(added.exercise, 4, const [
+        DropStage(weight: 6, reps: 10),
+        DropStage(weight: 4, reps: 10),
+        DropStage(weight: 2, reps: 12),
+      ]);
+      expect(added.exercise.sets[4].totalReps, 32);
+
+      // Persist & reload roundtrip
+      fit.persistNow();
+      fit.loadFromStore();
+      final reloaded = fit.sessionsOn(today).first.exercises.firstWhere((e) => e.id == fly.id);
+      expect(reloaded.sets, hasLength(5));
+      expect(reloaded.sets[0].isDropChain, isTrue);
+      expect(reloaded.sets[0].drops, hasLength(3));
+      expect(reloaded.sets[4].totalReps, 32);
+
+      // Effective stimulus gives drop-set bonus over a single straight 6kg x 12 set
+      final straightW = fit.effectiveSetWeight(fly.id, LoggedSet(12, 6));
+      final dropW = fit.effectiveSetWeight(fly.id, reloaded.sets[0]);
+      expect(dropW, greaterThan(straightW));
+
+      // AI export formats the drop chain clearly
+      final md = buildAiTrainingReport();
+      expect(md, contains('→'));
+      expect(md, contains('共36次·递减'));
+    });
   });
 }

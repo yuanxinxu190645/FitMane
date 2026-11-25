@@ -13,6 +13,7 @@ import '../state/fit_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'dialogs.dart';
+import 'drop_set_sheet.dart';
 import 'exercise_media.dart';
 import 'glass.dart';
 import 'liquid_notch.dart';
@@ -32,6 +33,13 @@ String _formatSetSummary(LoggedExercise e, LoggedSet s) {
       return '${fit.weightLabel(s.weight)} × $dur';
     }
     return dur;
+  }
+  if (s.isDropChain) {
+    final chain = s.drops
+        .map((d) => fmt((fit.toDisplayWeight(d.weight) * 100).round() / 100))
+        .join('→');
+    final pairedSuffix = fit.isPaired(e.id) ? '×2' : '';
+    return '$chain${fit.units}$pairedSuffix × ${s.totalReps}';
   }
   final repsText = s.sided ? t.sidesReps(s.left ?? 0, s.right ?? 0) : '${s.reps}';
   if (!fit.isRepsOnly(e.id) && s.weight > 0) {
@@ -476,30 +484,80 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
                     _setEditorRow(context, gc, s, e, i, repsOnly, catalogEx?.equipment),
                   ],
                   const SizedBox(height: 10),
-                  Pressable(
-                    scale: 0.97,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      fit.addLoggedSet(e);
-                    },
-                    child: Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: gc.bgRaised,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(PhosphorIconsBold.plus, size: 13, color: gc.accent),
-                          const SizedBox(width: 6),
-                          Text(
-                            ExtraStrings.quickLogAddSet,
-                            style: AppTheme.f(13.5, weight: FontWeight.w700, color: gc.accent),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Pressable(
+                          scale: 0.97,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            fit.addLoggedSet(e);
+                          },
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: gc.bgRaised,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(PhosphorIconsBold.plus, size: 13, color: gc.accent),
+                                const SizedBox(width: 6),
+                                Text(
+                                  ExtraStrings.quickLogAddSet,
+                                  style: AppTheme.f(13.5, weight: FontWeight.w700, color: gc.accent),
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      if (!repsOnly && !fit.loggedDistance(e) && !fit.loggedTimed(e)) ...[
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Pressable(
+                            scale: 0.97,
+                            onTap: () async {
+                              HapticFeedback.selectionClick();
+                              final lastDrop = e.sets.lastWhere(
+                                (st) => st.isDropChain,
+                                orElse: () => LoggedSet(0, 0),
+                              );
+                              final res = await showDropSetBuilderSheet(
+                                context,
+                                exerciseId: e.id,
+                                exercise: catalogEx,
+                                initialStages: lastDrop.isDropChain ? lastDrop.drops : null,
+                                allowBatchCount: true,
+                                initialCount: 5,
+                              );
+                              if (res != null) {
+                                fit.addDropChainSets(e, res.stages, count: res.count);
+                              }
+                            },
+                            child: Container(
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: gc.info.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(PhosphorIconsBold.trendDown, size: 13, color: gc.info),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    ExtraStrings.dropSetAddButton,
+                                    style: AppTheme.f(13.5, weight: FontWeight.w700, color: gc.info),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -621,8 +679,166 @@ class _QuickLogSheetState extends State<_QuickLogSheet> {
     final distance = fit.loggedDistance(e);
     final timed = !distance && fit.loggedTimed(e);
     final kindTag = setKindTag(set.kind);
-    final badgeText = kindTag.isEmpty ? '${i + 1}' : kindTag;
+    final badgeText = set.isDropChain ? 'D${i + 1}' : (kindTag.isEmpty ? '${i + 1}' : kindTag);
     final badgeColor = set.kind == SetKind.normal ? gc.text : setKindColor(gc, set.kind);
+
+    if (set.isDropChain) {
+      final isPr = fit.isQuickLogSetPr(e, i, _day);
+      final catalogEx = fit.exerciseById(e.id);
+      return Container(
+        padding: const EdgeInsets.fromLTRB(10, 9, 6, 9),
+        decoration: BoxDecoration(
+          color: gc.bgRaised,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isPr
+                ? gc.accent.withValues(alpha: 0.45)
+                : gc.info.withValues(alpha: 0.25),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () async {
+                    final picked = await askSetKind(context, set.kind);
+                    if (picked != null) fit.setLoggedKind(e, i, picked);
+                  },
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: gc.info.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      badgeText,
+                      style: AppTheme.d(12, weight: FontWeight.w800, color: gc.info),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () async {
+                      HapticFeedback.selectionClick();
+                      final res = await showDropSetBuilderSheet(
+                        context,
+                        exerciseId: e.id,
+                        exercise: catalogEx,
+                        initialStages: set.drops,
+                        allowBatchCount: false,
+                      );
+                      if (res != null) {
+                        fit.setLoggedDropChain(e, i, res.stages);
+                        if (context.mounted) _checkPrToast(context, gc, e, i);
+                      }
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            for (var k = 0; k < set.drops.length; k++) ...[
+                              if (k > 0)
+                                Text(
+                                  '→',
+                                  style: AppTheme.f(11, weight: FontWeight.w700, color: gc.textTertiary),
+                                ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: gc.bgRaised2,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '${fmt((fit.toDisplayWeight(set.drops[k].weight) * 100).round() / 100)}${fit.units}×${set.drops[k].reps}',
+                                  style: AppTheme.d(12, weight: FontWeight.w700, color: gc.text),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              ExtraStrings.dropSetRowSummary(set.totalReps),
+                              style: AppTheme.f(11, weight: FontWeight.w600, color: gc.info),
+                            ),
+                            if (isPr) ...[
+                              const SizedBox(width: 6),
+                              Icon(PhosphorIconsFill.star, size: 10, color: gc.accent),
+                              const SizedBox(width: 2),
+                              Text(
+                                ExtraStrings.prBadge,
+                                style: AppTheme.d(9.5, weight: FontWeight.w800, color: gc.accent),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () async {
+                    final text = await askText(
+                      context,
+                      title: ExtraStrings.quickLogSetNoteTitle,
+                      initial: set.note,
+                      hint: ExtraStrings.quickLogSetNoteHint,
+                      allowEmpty: true,
+                    );
+                    if (text != null) fit.setLoggedNote(e, i, text);
+                  },
+                  child: SizedBox(
+                    width: 30,
+                    height: 36,
+                    child: Icon(
+                      set.note.isNotEmpty ? PhosphorIconsFill.notePencil : PhosphorIconsRegular.notePencil,
+                      size: 14,
+                      color: set.note.isNotEmpty ? gc.accent : gc.textTertiary,
+                    ),
+                  ),
+                ),
+                Semantics(
+                  button: true,
+                  label: t.removeSet,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => fit.removeLoggedSet(s, e, i),
+                    child: SizedBox(
+                      width: 30,
+                      height: 36,
+                      child: Icon(PhosphorIconsRegular.x, size: 14, color: gc.textTertiary),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (set.note.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(38, 6, 8, 2),
+                child: Text(
+                  set.note,
+                  style: AppTheme.f(11.5, weight: FontWeight.w500, color: gc.textSecondary, height: 1.3),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
 
     Widget cell(
       String label,

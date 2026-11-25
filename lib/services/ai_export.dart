@@ -141,6 +141,11 @@ String buildAiTrainingReport({DateTime? now}) {
             parts.add('${fit.distanceValueFor(e.id, st.km ?? 0)}${fit.distanceUnitFor(e.id)}$kindMark$noteMark');
           } else if (fit.loggedTimed(e)) {
             parts.add('${st.sec ?? 0}s$kindMark$noteMark');
+          } else if (st.isDropChain) {
+            final chain = st.drops
+                .map((d) => '${fit.weightLabel(d.weight)}×${d.reps}')
+                .join(' → ');
+            parts.add('$chain (共${st.totalReps}次·递减)$rpeMark$noteMark');
           } else if (st.weight > 0) {
             final repsText = st.sided ? '${st.left ?? 0}/${st.right ?? 0}' : '${st.reps}';
             parts.add('${fit.weightLabel(st.weight)}×$repsText$kindMark$rpeMark$noteMark');

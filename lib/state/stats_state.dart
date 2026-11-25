@@ -461,7 +461,15 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
   }
 
   void _replaceLoggedSet(LoggedExercise e, int i,
-      {int? reps, int? left, int? right, double? weight, int? sec, double? km, SetKind? kind, String? note}) {
+      {int? reps,
+      int? left,
+      int? right,
+      double? weight,
+      int? sec,
+      double? km,
+      SetKind? kind,
+      String? note,
+      List<DropStage>? drops}) {
     if (i < 0 || i >= e.sets.length) return;
     final old = e.sets[i];
     var l = old.left;
@@ -485,6 +493,7 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
       note: note ?? old.note,
       left: l,
       right: r,
+      drops: drops ?? old.drops,
     );
     persistNow();
     _refreshWidgets();
@@ -585,14 +594,23 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
             nextWeight = nextProgWeight(src.weight);
           }
         }
-        initialSets.add(LoggedSet(
-          nextReps,
-          nextWeight,
-          sec: src.sec,
-          km: src.km,
-          left: src.left,
-          right: src.right,
-        ));
+        if (src.isDropChain) {
+          initialSets.add(LoggedSet(
+            src.totalReps,
+            src.weight,
+            kind: SetKind.drop,
+            drops: [for (final d in src.drops) DropStage(weight: d.weight, reps: d.reps)],
+          ));
+        } else {
+          initialSets.add(LoggedSet(
+            nextReps,
+            nextWeight,
+            sec: src.sec,
+            km: src.km,
+            left: src.left,
+            right: src.right,
+          ));
+        }
       } else if (cardio) {
         initialSets.add(LoggedSet(0, 0, sec: 1200, km: 3.0));
       } else if (timed) {
@@ -729,10 +747,65 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
 
   void addLoggedSet(LoggedExercise e) {
     final last = e.sets.isNotEmpty ? e.sets.last : LoggedSet(10, isRepsOnly(e.id) ? 0 : 20);
-    e.sets.add(LoggedSet(last.reps, last.weight, sec: last.sec, km: last.km, left: last.left, right: last.right));
+    if (last.isDropChain) {
+      e.sets.add(LoggedSet(
+        last.totalReps,
+        last.weight,
+        kind: SetKind.drop,
+        drops: [for (final d in last.drops) DropStage(weight: d.weight, reps: d.reps)],
+      ));
+    } else {
+      e.sets.add(LoggedSet(last.reps, last.weight, sec: last.sec, km: last.km, left: last.left, right: last.right));
+    }
     persistNow();
     _refreshWidgets();
     notifyListeners();
+  }
+
+  /// Adds [count] multi-stage drop-set chains (e.g. 6kg×12 -> 4kg×12 -> 2kg×12) to [e].
+  /// If [e] only contains untouched 0-weight default placeholder sets, replaces them cleanly.
+  void addDropChainSets(LoggedExercise e, List<DropStage> stages, {int count = 1}) {
+    final clean = [
+      for (final d in stages)
+        if (d.reps > 0) DropStage(weight: _round3(d.weight.clamp(0, 1000)), reps: d.reps.clamp(1, 999)),
+    ];
+    if (clean.length < 2) return;
+    final topW = clean.map((d) => d.weight).reduce((a, b) => a > b ? a : b);
+    final totReps = clean.fold<int>(0, (s, d) => s + d.reps);
+    final n = count.clamp(1, 12);
+    final onlyEmptyDefaults =
+        e.sets.isNotEmpty && e.sets.every((s) => !s.isDropChain && s.weight == 0 && s.note.isEmpty);
+    if (onlyEmptyDefaults) e.sets.clear();
+    for (var k = 0; k < n; k++) {
+      e.sets.add(LoggedSet(
+        totReps,
+        topW,
+        kind: SetKind.drop,
+        drops: [for (final d in clean) DropStage(weight: d.weight, reps: d.reps)],
+      ));
+    }
+    persistNow();
+    _refreshWidgets();
+    notifyListeners();
+  }
+
+  void setLoggedDropChain(LoggedExercise e, int i, List<DropStage> stages) {
+    if (i < 0 || i >= e.sets.length) return;
+    final clean = [
+      for (final d in stages)
+        if (d.reps > 0) DropStage(weight: _round3(d.weight.clamp(0, 1000)), reps: d.reps.clamp(1, 999)),
+    ];
+    if (clean.length < 2) return;
+    final topW = clean.map((d) => d.weight).reduce((a, b) => a > b ? a : b);
+    final totReps = clean.fold<int>(0, (s, d) => s + d.reps);
+    _replaceLoggedSet(
+      e,
+      i,
+      reps: totReps,
+      weight: topW,
+      kind: SetKind.drop,
+      drops: clean,
+    );
   }
 
   void removeLoggedSet(LoggedSession s, LoggedExercise e, int i) {
@@ -1277,8 +1350,13 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
       loadFactor = (0.75 + (st.reps / 22.0).clamp(0.0, 0.45)).clamp(0.75, 1.25);
     } else {
       double effectiveLoad = st.weight;
+      if (st.isDropChain) {
+        final totalR = st.totalReps;
+        final avgW = totalR > 0 ? st.volume / totalR : st.weight;
+        effectiveLoad = st.weight * 0.6 + avgW * 0.4;
+      }
       if (isAssisted(exerciseId)) {
-        effectiveLoad = math.max(10.0, lbm - st.weight);
+        effectiveLoad = math.max(10.0, lbm - effectiveLoad);
       } else if (eq == 'Dumbbell' && !st.sided) {
         final lower = (ex?.name ?? '').toLowerCase();
         final unilateral = lower.contains('single-arm') ||
@@ -1288,7 +1366,7 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
             lower.contains('goblet') ||
             lower.contains('concentration');
         if (isPaired(exerciseId) || !unilateral) {
-          effectiveLoad = st.weight * 2;
+          effectiveLoad = effectiveLoad * 2;
         }
       }
       final refLoad = lbm * _muscleRefRatio(primary);
@@ -1305,7 +1383,10 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
       effortFactor = st.reps <= 6 ? 1.10 : (st.reps <= 15 ? 1.00 : 0.95);
     }
 
-    return (moveFactor * loadFactor * effortFactor).clamp(0.45, 2.20);
+    final dropBonus =
+        st.isDropChain ? (1.0 + ((st.drops.length - 1) * 0.12).clamp(0.10, 0.35)) : 1.0;
+
+    return (moveFactor * loadFactor * effortFactor * dropBonus).clamp(0.45, 2.20);
   }
 
   Map<String, double> effectiveMuscleSetsOver(int days) {
@@ -1402,7 +1483,11 @@ mixin StatsState on FitCore, ToolsState, LibraryState, SettingsState, TimelineSt
 
   double _setEffort(LoggedSet st) {
     final rpe = st.rpe;
-    if (rpe == null) return st.kind == SetKind.failure ? 1.2 : 1;
+    if (rpe == null) {
+      if (st.kind == SetKind.failure) return 1.2;
+      if (st.isDropChain) return 1.15;
+      return 1;
+    }
     return ((rpe - 5) / 4).clamp(0.4, 1.3);
   }
 

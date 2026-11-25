@@ -18,9 +18,30 @@ double? rpePercent(int reps, double? rpe) {
 
 final Set<String> pairedDumbbells = {};
 
+class DropStage {
+  const DropStage({required this.weight, required this.reps});
+
+  final double weight;
+  final int reps;
+
+  Map<String, dynamic> toJson() => {'w': weight, 'r': reps};
+
+  factory DropStage.fromJson(Map<String, dynamic> j) => DropStage(
+        weight: (j['w'] as num).toDouble(),
+        reps: (j['r'] as num).toInt(),
+      );
+}
+
 class LoggedSet {
   LoggedSet(this.reps, this.weight,
-      {this.kind = SetKind.normal, this.rpe, this.sec, this.km, this.note = '', this.left, this.right});
+      {this.kind = SetKind.normal,
+      this.rpe,
+      this.sec,
+      this.km,
+      this.note = '',
+      this.left,
+      this.right,
+      this.drops = const []});
   final int reps;
   final int? left;
   final int? right;
@@ -30,14 +51,34 @@ class LoggedSet {
   final double? rpe;
   final int? sec;
   final double? km;
+  final List<DropStage> drops;
 
   bool get counts => kind != SetKind.warmup;
   bool get sided => left != null && right != null;
+  bool get isDropChain => drops.length >= 2;
+  int get totalReps => isDropChain ? drops.fold(0, (s, d) => s + d.reps) : reps;
   double? get rir => rpe == null ? null : 10 - rpe!;
-  double get volume => counts ? (sided ? left! + right! : reps) * weight : 0;
+  double get volume {
+    if (!counts) return 0;
+    if (isDropChain) {
+      return drops.fold(0.0, (s, d) => s + d.weight * d.reps);
+    }
+    return (sided ? left! + right! : reps) * weight;
+  }
 
   double get oneRm {
-    if (!counts || reps <= 0) return 0;
+    if (!counts) return 0;
+    if (isDropChain) {
+      var best = 0.0;
+      for (final d in drops) {
+        if (d.reps <= 0 || d.weight <= 0) continue;
+        final pct = rpePercent(d.reps, rpe);
+        final est = pct == null ? d.weight * (1 + d.reps / 30) : d.weight / pct;
+        if (est > best) best = est;
+      }
+      return best;
+    }
+    if (reps <= 0) return 0;
     final pct = rpePercent(reps, rpe);
     return pct == null ? weight * (1 + reps / 30) : weight / pct;
   }
@@ -52,6 +93,7 @@ class LoggedSet {
         if (sec != null) 't': sec,
         if (km != null) 'km': km,
         if (note.isNotEmpty) 'n': note,
+        if (drops.isNotEmpty) 'dr': [for (final d in drops) d.toJson()],
       };
   factory LoggedSet.fromJson(Map<String, dynamic> j) => LoggedSet(
         (j['r'] as num).toInt(),
@@ -63,6 +105,10 @@ class LoggedSet {
         note: j['n'] as String? ?? '',
         left: (j['rl'] as num?)?.toInt(),
         right: (j['rr'] as num?)?.toInt(),
+        drops: [
+          for (final d in (j['dr'] as List?) ?? const [])
+            if (d is Map) DropStage.fromJson(d.cast<String, dynamic>()),
+        ],
       );
 }
 

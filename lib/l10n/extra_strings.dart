@@ -372,4 +372,27 @@ class ExtraStrings {
       _zh ? '上次覆盖更新：$time' : 'Last updated: $time';
   static String get aiCloudNeverSynced =>
       _zh ? '尚未同步' : 'Not synced yet';
+
+  // Multi-stage drop-set chains (v2.4.10)
+  static String get dropSetAddButton => _zh ? '递减大组' : 'Drop set';
+  static String get dropSetBuilderTitle => _zh ? '添加递减大组' : 'Add Drop-Set Chain';
+  static String get dropSetEditTitle => _zh ? '编辑递减大组' : 'Edit Drop-Set Chain';
+  static String get dropSetBuilderSubtitle => _zh
+      ? '配置每大组内的连续递减阶段（如 6→4→2kg 各 12 次），自动合并算 1 大组'
+      : 'Configure consecutive drop stages per set (e.g. 6→4→2kg × 12) counted as 1 set';
+  static String dropSetStageLabel(int n) => _zh ? '第 $n 阶' : 'Stage $n';
+  static String get dropSetAddStage => _zh ? '添加一阶' : 'Add stage';
+  static String get dropSetBatchCount => _zh ? '一次添加大组数' : 'Number of sets to add';
+  static String dropSetCountChip(int n) => _zh ? '$n 组' : '$n sets';
+  static String dropSetSummary(int totalReps, String volText, {bool paired = false}) => _zh
+      ? '每大组共 $totalReps 次 · 单组容量 $volText${paired ? "（双持×2）" : ""}'
+      : '$totalReps reps/set · $volText vol${paired ? " (×2)" : ""}';
+  static String dropSetConfirmAdd(int count) =>
+      _zh ? '添加 $count 个递减大组' : 'Add $count Drop ${count == 1 ? "Set" : "Sets"}';
+  static String get dropSetConfirmSave => _zh ? '保存递减大组' : 'Save Drop Set';
+  static String dropSetRowSummary(int totalReps) =>
+      _zh ? '共 $totalReps 次 · 点击编辑各阶' : '$totalReps total reps · tap to edit';
+  static String dropSetDumbbellHint(bool paired) => _zh
+      ? (paired ? '哑铃请填单只重量（容量自动×2）' : '哑铃请填单只重量')
+      : (paired ? 'Enter per-dumbbell weight (volume ×2)' : 'Enter per-dumbbell weight');
 }

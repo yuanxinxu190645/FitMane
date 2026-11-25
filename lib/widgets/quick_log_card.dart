@@ -31,6 +31,13 @@ class QuickLogCard extends StatelessWidget {
         best = st;
       }
     }
+    if (best.isDropChain) {
+      final chain = best.drops
+          .map((d) => fmt((fit.toDisplayWeight(d.weight) * 100).round() / 100))
+          .join('→');
+      final pairedSuffix = fit.isPaired(e.id) ? '×2' : '';
+      return '$chain${fit.units}$pairedSuffix × ${best.totalReps}';
+    }
     final repsStr = best.sided ? '${best.left ?? 0}/${best.right ?? 0}' : '${best.reps}';
     if (!fit.isRepsOnly(e.id) && best.weight > 0) {
       final pairedSuffix = (!best.sided && fit.isPaired(e.id)) ? '×2' : '';
